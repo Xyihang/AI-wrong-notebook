@@ -30,3 +30,13 @@ needs.md       # 原始需求
 | 大模型 | 通用 OpenAI 兼容接口（DeepSeek / 通义千问等）|
 | 存储 | 后端 SQLite + ChromaDB；前端 Drift SQLite 离线缓存 |
 | 部署 | Docker Compose 一键启动 |
+
+## 许可证 / License
+本项目采用 **PolyForm Noncommercial License 1.0.0**（详见 [`LICENSE`](LICENSE)）：
+
+- ✅ **允许非商业用途**：个人学习、研究、实验、业余项目，以及学校、公益/公立科研等非营利机构的使用、修改与再分发。
+- ❌ **禁止任何商业用途**：不得用于营利性产品或服务、对外收费、企业内部商业化运营、以本软件提供付费服务等。
+- ⚠️ 再分发须随附本许可证全文并保留版权声明。
+- 如需商业授权，请联系作者另行取得书面许可。
+
+> Copyright (c) 2026 Xyihang. All rights reserved (non-commercial use only).

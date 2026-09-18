@@ -1,0 +1,314 @@
+import 'dart:async';
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
+import 'package:smart_wrong_notebook/src/features/auth/presentation/login_screen.dart';
+import 'package:smart_wrong_notebook/src/features/auth/presentation/register_screen.dart';
+import 'package:smart_wrong_notebook/src/data/repositories/drift_settings_repository.dart';
+import 'package:smart_wrong_notebook/src/data/repositories/drift_question_repository.dart';
+import 'package:smart_wrong_notebook/src/data/repositories/syncing_question_repository.dart';
+import 'package:smart_wrong_notebook/src/data/repositories/drift_ai_conversation_repository.dart';
+import 'package:smart_wrong_notebook/src/data/repositories/drift_analysis_job_repository.dart';
+import 'package:smart_wrong_notebook/src/data/local/app_database.dart';
+import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
+import 'package:smart_wrong_notebook/src/data/services/app_analysis_job_runner.dart';
+import 'package:smart_wrong_notebook/src/data/services/ai_learning_task_coordinator.dart';
+import 'package:smart_wrong_notebook/src/data/services/question_analysis_coordinator.dart';
+import 'package:smart_wrong_notebook/src/domain/services/analysis_job_queue_executor.dart';
+import 'package:smart_wrong_notebook/src/app/theme/app_theme.dart';
+import 'package:smart_wrong_notebook/src/features/home/presentation/home_screen.dart';
+import 'package:smart_wrong_notebook/src/features/notebook/presentation/notebook_screen.dart';
+import 'package:smart_wrong_notebook/src/features/notebook/presentation/question_detail_screen.dart';
+import 'package:smart_wrong_notebook/src/features/review/presentation/review_screen.dart';
+import 'package:smart_wrong_notebook/src/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:smart_wrong_notebook/src/features/settings/presentation/settings_screen.dart';
+import 'package:smart_wrong_notebook/src/features/settings/presentation/provider_config_screen.dart';
+import 'package:smart_wrong_notebook/src/features/settings/presentation/subject_management_screen.dart';
+import 'package:smart_wrong_notebook/src/features/settings/presentation/prompt_settings_screen.dart';
+import 'package:smart_wrong_notebook/src/features/settings/presentation/data_management_screen.dart';
+import 'package:smart_wrong_notebook/src/features/capture/presentation/question_correction_screen.dart';
+import 'package:smart_wrong_notebook/src/features/capture/presentation/image_crop_screen.dart';
+import 'package:smart_wrong_notebook/src/features/ocr/presentation/question_save_confirmation_screen.dart';
+import 'package:smart_wrong_notebook/src/features/ocr/presentation/question_split_confirmation_screen.dart';
+import 'package:smart_wrong_notebook/src/features/analysis/presentation/analysis_loading_screen.dart';
+import 'package:smart_wrong_notebook/src/features/analysis/presentation/analysis_result_screen.dart';
+import 'package:smart_wrong_notebook/src/features/analysis/presentation/question_text_correction_screen.dart';
+import 'package:smart_wrong_notebook/src/features/analysis/presentation/exercise_practice_screen.dart';
+import 'package:smart_wrong_notebook/src/features/review/presentation/review_history_screen.dart';
+import 'package:smart_wrong_notebook/src/data/files/image_storage_service.dart';
+import 'package:smart_wrong_notebook/src/shared/widgets/katex_math_view.dart';
+import 'package:smart_wrong_notebook/src/features/splash/splash_screen.dart';
+import 'package:smart_wrong_notebook/src/features/setup/setup_wizard_screen.dart';
+import 'package:smart_wrong_notebook/src/features/achievements/presentation/achievements_screen.dart';
+import 'package:smart_wrong_notebook/src/features/paper/presentation/paper_setup_screen.dart';
+import 'package:smart_wrong_notebook/src/features/paper/presentation/paper_preview_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  KatexMathView.preload();
+
+  final navigatorKey = GlobalKey<NavigatorState>();
+  final db = AppDatabase();
+  final settingsRepo = DriftSettingsRepository(db);
+  final authController = AuthController(settingsRepo);
+  final questionRepo = SyncingQuestionRepository(DriftQuestionRepository(db));
+  final aiConversationRepo = DriftAiConversationRepository(db);
+  final aiService = AiAnalysisService(
+    settingsRepository: settingsRepo,
+    largeTokenRetryNotifier: () async {
+      // 大 token 重试前的提示弹窗（仅提示，不询问选择）。
+      final ctx = navigatorKey.currentContext;
+      if (ctx == null) return;
+      await showDialog<void>(
+        context: ctx,
+        builder: (dialogCtx) => AlertDialog(
+          title: const Text('题目较复杂'),
+          content: const Text(
+              '当前题目内容较复杂，AI 首次分析未返回完整结果。\n'
+              '正在使用更大的输出额度（MAXTOKEN）自动重试一次，'
+              '本次约多花费 ¥0.05 左右。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(),
+              child: const Text('知道了'),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+  final analysisJobRepo = DriftAnalysisJobRepository(db);
+  final analysisJobExecutor = AnalysisJobQueueExecutor(
+    repository: analysisJobRepo,
+    runner: AppAnalysisJobRunner(
+      aiService,
+      questionRepository: questionRepo,
+      analysisJobRepository: analysisJobRepo,
+    ),
+  );
+  final questionAnalysisCoordinator = QueuedQuestionAnalysisCoordinator(
+    service: aiService,
+    settingsRepository: settingsRepo,
+    repository: analysisJobRepo,
+    executor: analysisJobExecutor,
+  );
+  final aiLearningTaskCoordinator = QueuedAiLearningTaskCoordinator(
+    settingsRepository: settingsRepo,
+    repository: analysisJobRepo,
+    executor: analysisJobExecutor,
+    questionRepository: questionRepo,
+  );
+
+  final router = GoRouter(
+    navigatorKey: navigatorKey,
+    initialLocation: '/splash',
+    refreshListenable: authController.refreshListenable,
+    redirect: _authRedirect(authController),
+    routes: [
+      GoRoute(
+          path: '/splash',
+          builder: (context, state) => const SplashScreen()),
+      GoRoute(
+          path: '/setup',
+          builder: (context, state) => const SetupWizardScreen()),
+      GoRoute(
+          path: '/login',
+          builder: (context, state) => const LoginScreen()),
+      GoRoute(
+          path: '/register',
+          builder: (context, state) => const RegisterScreen()),
+      GoRoute(
+          path: '/onboarding',
+          builder: (context, state) => const OnboardingScreen()),
+      StatefulShellRoute.indexedStack(
+        builder: (BuildContext context, GoRouterState state,
+            StatefulNavigationShell navigationShell) {
+          return ScaffoldWithNavBar(navigationShell: navigationShell);
+        },
+        branches: <StatefulShellBranch>[
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/', builder: (_, __) => const HomeScreen())
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/notebook', builder: (_, __) => const NotebookScreen())
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/review', builder: (_, __) => const ReviewScreen())
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/settings',
+              builder: (_, __) => const SettingsScreen(),
+              routes: [
+                GoRoute(
+                    path: 'provider',
+                    builder: (_, __) => const ProviderConfigScreen()),
+                GoRoute(
+                    path: 'subjects',
+                    builder: (_, __) => const SubjectManagementScreen()),
+                GoRoute(
+                    path: 'prompts',
+                    builder: (_, __) => const PromptSettingsScreen()),
+                GoRoute(
+                    path: 'data',
+                    builder: (_, __) => const DataManagementScreen()),
+              ],
+            ),
+          ]),
+        ],
+      ),
+      GoRoute(
+          path: '/capture/crop',
+          builder: (context, state) => const ImageCropScreen()),
+      GoRoute(
+          path: '/capture/correction',
+          builder: (context, state) => const QuestionCorrectionScreen()),
+      GoRoute(
+          path: '/capture/save-confirmation',
+          builder: (context, state) => const QuestionSaveConfirmationScreen()),
+      GoRoute(
+          path: '/capture/split-confirmation',
+          builder: (context, state) => const QuestionSplitConfirmationScreen()),
+      GoRoute(
+          path: '/analysis/loading',
+          builder: (context, state) => const AnalysisLoadingScreen()),
+      GoRoute(
+          path: '/analysis/result',
+          builder: (context, state) => const AnalysisResultScreen()),
+      GoRoute(
+        path: '/analysis/text-correction',
+        builder: (context, state) => const QuestionTextCorrectionScreen(),
+      ),
+      GoRoute(
+          path: '/exercise/practice',
+          builder: (context, state) => const ExercisePracticeScreen()),
+      GoRoute(
+          path: '/notebook/question/:id',
+          builder: (context, state) => const QuestionDetailScreen()),
+      GoRoute(
+          path: '/review/history',
+          builder: (context, state) => const ReviewHistoryScreen()),
+      GoRoute(
+          path: '/achievements',
+          builder: (context, state) => const AchievementsScreen()),
+      GoRoute(
+          path: '/paper/setup',
+          builder: (context, state) => const PaperSetupScreen()),
+      GoRoute(
+          path: '/paper/preview',
+          builder: (context, state) => const PaperPreviewScreen()),
+    ],
+  );
+
+  // 旧的 onboarding 自动跳转已废弃：首次启动路由由 SplashScreen 统一决定
+  // （未完成配置向导 -> /setup，已完成 -> /）。此处不再自动跳转 /onboarding，
+  // 避免与 /setup 冲突（首次启动被旧 onboarding 覆盖的问题）。
+  // WidgetsBinding.instance.addPostFrameCallback((_) async {
+  //   try {
+  //     final onboardingDone = await settingsRepo.getString('onboarding_done');
+  //     if (onboardingDone == null) {
+  //       router.go('/onboarding');
+  //     }
+  //   } catch (_) {}
+  // });
+
+  runApp(
+    ProviderScope(
+      overrides: [
+        settingsRepositoryProvider.overrideWithValue(settingsRepo),
+        authControllerProvider.overrideWith((ref) => authController),
+        questionRepositoryProvider.overrideWithValue(questionRepo),
+        aiConversationRepositoryProvider.overrideWithValue(aiConversationRepo),
+        analysisJobRepositoryProvider.overrideWithValue(analysisJobRepo),
+        aiAnalysisServiceProvider.overrideWithValue(aiService),
+        questionAnalysisCoordinatorProvider
+            .overrideWithValue(questionAnalysisCoordinator),
+        aiLearningTaskCoordinatorProvider
+            .overrideWithValue(aiLearningTaskCoordinator),
+        imageStorageServiceProvider.overrideWithValue(ImageStorageService()),
+      ],
+      child: Consumer(
+        builder: (context, ref, _) => MaterialApp.router(
+          title: 'AI错题本',
+          theme: buildLightTheme(),
+          darkTheme: buildDarkTheme(),
+          themeMode: ref.watch(themeModeProvider),
+          routerConfig: router,
+          debugShowCheckedModeBanner: false,
+        ),
+      ),
+    ),
+  );
+
+  unawaited(analysisJobExecutor.initialize());
+}
+
+/// 认证路由守卫：未登录时只能访问公开页（splash/setup/onboarding/login/register），
+/// 其余路由重定向到登录页；已登录访问登录/注册页则回首页。
+String? Function(BuildContext, GoRouterState) _authRedirect(
+    AuthController authController) {
+  bool isPublic(String path) {
+    return path == '/splash' ||
+        path == '/setup' ||
+        path == '/onboarding' ||
+        path == '/login' ||
+        path == '/register';
+  }
+
+  return (context, state) {
+    final auth = authController.currentState;
+    final path = state.matchedLocation;
+    // 启动中：交由 SplashScreen 决定（其会等待 auth 加载完成再跳转）
+    if (auth is AuthChecking) return null;
+    final authed = auth is AuthAuthenticated;
+    if (authed) {
+      if (path == '/login' || path == '/register') return '/';
+      return null;
+    }
+    // 未登录：仅放行公开页，其余跳登录
+    return isPublic(path) ? null : '/login';
+  };
+}
+
+class ScaffoldWithNavBar extends StatelessWidget {
+  const ScaffoldWithNavBar({required this.navigationShell, super.key});
+  final StatefulNavigationShell navigationShell;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: navigationShell,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: navigationShell.currentIndex,
+        onDestinationSelected: (int index) => navigationShell.goBranch(index),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(CupertinoIcons.house),
+            selectedIcon: Icon(CupertinoIcons.house_fill),
+            label: '首页',
+          ),
+          NavigationDestination(
+            icon: Icon(CupertinoIcons.book),
+            selectedIcon: Icon(CupertinoIcons.book_fill),
+            label: '错题本',
+          ),
+          NavigationDestination(
+            icon: Icon(CupertinoIcons.arrow_2_circlepath),
+            selectedIcon: Icon(CupertinoIcons.arrow_2_circlepath),
+            label: '复习',
+          ),
+          NavigationDestination(
+            icon: Icon(CupertinoIcons.gear),
+            selectedIcon: Icon(CupertinoIcons.gear_solid),
+            label: '设置',
+          ),
+        ],
+      ),
+    );
+  }
+}

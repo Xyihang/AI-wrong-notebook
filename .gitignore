@@ -1,0 +1,80 @@
+# ============================================================================
+# AI 错题本 — 仓库忽略规则
+# 目标：只提交源码与文档；排除【敏感信息】【运行时产物】【大体积二进制/SDK】
+# ============================================================================
+
+# ---------- 敏感信息（绝不提交） ----------
+# 后端环境变量（含真实 LLM Key、默认账号）
+backend/.env
+.env
+.env.*
+!*.env.example
+!**/.env.example
+# Android 签名密钥与密码
+frontend/android/key.properties
+frontend/android/local.properties
+*.jks
+*.keystore
+*.p12
+# SSH 私钥 / 证书
+*.pem
+*.key
+*.ppk
+_ssh_deploy_key.pem
+
+# ---------- 运行时数据 / 本地数据库 ----------
+backend/data/
+**/data/*.db
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# ---------- 本机 SDK / 工具（非项目源码，体积极大） ----------
+android-sdk/
+platform-tools/
+gradle-8.14-all/
+
+# ---------- 构建产物 / 缓存 ----------
+**/build/
+**/.gradle/
+**/.kotlin/
+**/.dart_tool/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/node_modules/
+**/.venv/
+**/venv/
+**/env/
+**/target/
+**/dist/
+**/.pytest_cache/
+**/.mypy_cache/
+
+# ---------- 二进制 / 压缩包 / 模型权重 ----------
+*.apk
+*.aab
+*.ipa
+*.zip
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+*.pt
+*.pth
+*.onnx
+*.ckpt
+*.bin
+
+# ---------- 运行时输出 ----------
+convosage-tools-bubble_ocr/**/runs/
+frontend/app_flutter/exports/
+
+# ---------- 系统 / 编辑器 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.iml
+.vscode/

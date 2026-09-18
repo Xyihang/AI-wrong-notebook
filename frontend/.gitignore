@@ -1,0 +1,24 @@
+# Worktrees
+.worktrees/
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+*.iml
+.metadata
+pubspec.lock
+
+# IDE
+.idea/
+*.swp
+.DS_Store
+
+# Local tooling and transient diagnostics
+.vercel/
+codex-patches/
+flutter_*.log

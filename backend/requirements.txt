@@ -1,0 +1,46 @@
+# ============================================================
+# AI-Wrong 错题整理系统 — 后端核心依赖（Python 3.10+）
+# 安装：pip install -r requirements.txt
+# ============================================================
+
+# --- Web 框架 ---
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.29,<1.0
+python-multipart>=0.0.9
+
+# --- 数据校验 / 配置 ---
+pydantic>=2.6,<3.0
+pydantic-settings>=2.2,<3.0
+python-dotenv>=1.0
+
+# --- 数据库 ---
+SQLAlchemy>=2.0,<2.1
+
+# --- 图像 / OCR 基础 ---
+opencv-python-headless>=4.9,<5.0
+numpy>=1.26,<2.0
+Pillow>=10.2
+# --- 本地 OCR 引擎（RapidOCR，基于 onnxruntime，中文效果好、轻量）---
+rapidocr_onnxruntime>=1.4.0
+
+# --- 向量检索 ---
+chromadb>=0.4.24
+
+# --- 网络 / HTTP ---
+requests>=2.31
+
+# --- 导出 ---
+reportlab>=4.0
+
+# ============================================================
+# 可选重型依赖（默认不安装，按需取消注释）
+# 注意：paddleocr / texify / torch 体积大，首次安装耗时较长；
+# 未安装时后端会自动降级（纯文本 OCR / 无公式识别）。
+# ============================================================
+# --- PaddleOCR（中文印刷体识别，PP-OCRv5）---
+# paddlepaddle>=2.6
+# paddleocr>=2.7
+# --- texify（图片公式 -> LaTeX）---
+# texify
+# --- PyTorch（texify / 部分向量模型需要）---
+# torch

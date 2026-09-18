@@ -1,0 +1,20 @@
+# ============================================================
+# AI-Wrong 后端 Docker Compose
+# 用法：
+#   cd backend
+#   cp .env.example .env      # 按需配置 LLM Key 等（compose 要求 .env 存在）
+#   docker compose up -d --build
+# 访问：http://localhost:8000/docs
+# ============================================================
+services:
+  backend:
+    build: .
+    container_name: ai-wrong-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # SQLite / ChromaDB / 上传图片持久化到宿主 backend/data
+      - ./data:/app/data
+    env_file:
+      - .env
+    restart: unless-stopped

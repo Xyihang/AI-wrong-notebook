@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}题目管理 - 题库管理系统{% endblock %}
+
+{% block content %}
+<h2>题目管理</h2>
+
+<div class="toolbar">
+    <div class="search-section">
+        <input type="text" id="searchKeyword" class="form-control" placeholder="搜索题目内容...">
+        <button id="searchBtn" class="btn btn-primary">搜索</button>
+    </div>
+
+    <div class="filter-section">
+        <select id="filterType" class="form-control">
+            <option value="">全部题型</option>
+            <option value="选择题">选择题</option>
+            <option value="填空题">填空题</option>
+            <option value="判断题">判断题</option>
+            <option value="解答题">解答题</option>
+            <option value="计算题">计算题</option>
+        </select>
+
+        <select id="filterDifficulty" class="form-control">
+            <option value="">全部难度</option>
+            <option value="简单">简单</option>
+            <option value="中等">中等</option>
+            <option value="困难">困难</option>
+        </select>
+
+        <div id="tagFilter" class="tag-filter">
+            <button id="showTagsBtn" class="btn btn-secondary">按标签筛选</button>
+            <div id="tagsList" class="tags-dropdown" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="action-section">
+        <button id="addQuestionBtn" class="btn btn-success">+ 新建题目</button>
+        <button id="exportSelectedBtn" class="btn btn-info">导出选中题目</button>
+    </div>
+</div>
+
+<div id="questionsTable">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th width="50"><input type="checkbox" id="selectAll"></th>
+                <th width="80">ID</th>
+                <th>题目内容</th>
+                <th width="100">题型</th>
+                <th width="100">难度</th>
+                <th width="200">标签</th>
+                <th width="150">操作</th>
+            </tr>
+        </thead>
+        <tbody id="questionsBody">
+            <tr>
+                <td colspan="7" class="text-center">加载中...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="pagination" id="pagination"></div>
+
+<!-- 新建/编辑题目模态框 -->
+<div id="questionModal" class="modal">
+    <div class="modal-content modal-large">
+        <h3 id="modalTitle">新建题目</h3>
+        <form id="questionForm">
+            <input type="hidden" id="questionId">
+
+            <div class="form-group">
+                <label>题目内容：*</label>
+                <textarea id="content" class="form-control" rows="5" required></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>题型：</label>
+                    <select id="questionType" class="form-control">
+                        <option value="选择题">选择题</option>
+                        <option value="填空题">填空题</option>
+                        <option value="判断题">判断题</option>
+                        <option value="解答题">解答题</option>
+                        <option value="计算题">计算题</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>难度：</label>
+                    <select id="difficulty" class="form-control">
+                        <option value="简单">简单</option>
+                        <option value="中等">中等</option>
+                        <option value="困难">困难</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>知识点标签（多个用逗号分隔）：</label>
+                <input type="text" id="tags" class="form-control" placeholder="例如：代数,方程">
+            </div>
+
+            <div class="form-group">
+                <label>答案：</label>
+                <textarea id="answer" class="form-control" rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>解析：</label>
+                <textarea id="analysis" class="form-control" rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>来源：</label>
+                <input type="text" id="source" class="form-control" placeholder="例如：2023年期中考试">
+            </div>
+
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">保存</button>
+                <button type="button" id="closeModalBtn" class="btn btn-secondary">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/questions.js') }}"></script>
+{% endblock %}

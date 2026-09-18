@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}导入题目 - 题库管理系统{% endblock %}
+
+{% block content %}
+<h2>导入题目</h2>
+<p class="subtitle">上传图片或PDF文件，系统将自动识别并提取题目内容（支持英文题目优先识别）</p>
+
+<div class="ai-status-bar" id="aiStatusBar">
+    <span id="aiStatusText">正在检查AI助手状态...</span>
+    <label class="ai-toggle">
+        <input type="checkbox" id="useAiToggle" checked>
+        <span>使用AI智能纠正</span>
+    </label>
+</div>
+
+<div class="upload-section">
+    <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📁</div>
+        <p>点击选择文件或拖拽文件到此处</p>
+        <p class="upload-hint">支持 JPG, PNG, PDF 格式，最大 16MB</p>
+        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" style="display: none;">
+    </div>
+</div>
+
+<div id="processingStatus" class="processing-status" style="display: none;">
+    <div class="spinner"></div>
+    <p>正在识别文本，请稍候...</p>
+</div>
+
+<div id="resultSection" style="display: none;">
+    <h3>识别结果</h3>
+
+    <!-- AI纠正信息 -->
+    <div id="aiCorrectionInfo" class="ai-info-box" style="display: none;">
+        <h4>🤖 AI纠正信息</h4>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">OCR置信度:</span>
+                <span id="ocrConfidence">-</span>
+            </div>
+            <div class="info-item">
+                <span class="label">AI纠正置信度:</span>
+                <span id="aiConfidence">-</span>
+            </div>
+        </div>
+        <div id="correctionsList" style="margin-top: 1rem;">
+            <strong>纠正内容:</strong>
+            <ul id="correctionsItems"></ul>
+        </div>
+    </div>
+
+    <div class="result-tabs">
+        <button class="tab-btn active" data-tab="text">识别文本</button>
+        <button class="tab-btn" data-tab="original" id="originalTab" style="display: none;">原始OCR</button>
+        <button class="tab-btn" data-tab="questions">智能提取的题目</button>
+    </div>
+
+    <div id="textTab" class="tab-content active">
+        <textarea id="extractedText" rows="15" class="form-control"></textarea>
+    </div>
+
+    <div id="originalTab" class="tab-content">
+        <textarea id="originalText" rows="15" class="form-control" readonly></textarea>
+    </div>
+
+    <div id="questionsTab" class="tab-content">
+        <div id="questionsList"></div>
+    </div>
+
+    <div class="action-buttons">
+        <button id="saveQuestionsBtn" class="btn btn-primary">保存题目到题库</button>
+        <button id="clearBtn" class="btn btn-secondary">清空并重新上传</button>
+    </div>
+</div>
+
+<div id="saveModal" class="modal">
+    <div class="modal-content">
+        <h3>保存题目</h3>
+        <div id="questionForm">
+            <div class="form-group">
+                <label>题型：</label>
+                <select id="questionType" class="form-control">
+                    <option value="选择题">选择题</option>
+                    <option value="填空题">填空题</option>
+                    <option value="判断题">判断题</option>
+                    <option value="解答题">解答题</option>
+                    <option value="计算题">计算题</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>难度：</label>
+                <select id="difficulty" class="form-control">
+                    <option value="简单">简单</option>
+                    <option value="中等">中等</option>
+                    <option value="困难">困难</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>知识点标签（多个标签用逗号分隔）：</label>
+                <input type="text" id="tags" class="form-control" placeholder="例如：代数,方程,二次方程">
+            </div>
+            <div class="form-group">
+                <label>答案：</label>
+                <textarea id="answer" class="form-control" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button id="confirmSaveBtn" class="btn btn-primary">确认保存</button>
+            <button id="cancelSaveBtn" class="btn btn-secondary">取消</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+{% endblock %}

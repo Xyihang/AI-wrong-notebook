@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}组卷 - 题库管理系统{% endblock %}
+
+{% block content %}
+<h2>智能组卷</h2>
+
+<div class="exam-section">
+    <div class="exam-methods">
+        <div class="method-tabs">
+            <button class="tab-btn active" data-method="manual">手动选题</button>
+            <button class="tab-btn" data-method="auto">自动组卷</button>
+            <button class="tab-btn" data-method="view">查看试卷</button>
+        </div>
+    </div>
+
+    <!-- 手动选题 -->
+    <div id="manualMethod" class="method-content active">
+        <div class="paper-config">
+            <h3>试卷设置</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>试卷名称：*</label>
+                    <input type="text" id="manualPaperName" class="form-control" placeholder="例如：期末考试">
+                </div>
+                <div class="form-group">
+                    <label>试卷尺寸：</label>
+                    <select id="manualPaperSize" class="form-control">
+                        <option value="A4">A4</option>
+                        <option value="A3">A3</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>试卷说明：</label>
+                <textarea id="manualDescription" class="form-control" rows="2"></textarea>
+            </div>
+        </div>
+
+        <div class="question-selector">
+            <h3>选择题目</h3>
+            <div class="selector-filters">
+                <select id="selectorType" class="form-control">
+                    <option value="">全部题型</option>
+                    <option value="选择题">选择题</option>
+                    <option value="填空题">填空题</option>
+                    <option value="判断题">判断题</option>
+                    <option value="解答题">解答题</option>
+                </select>
+                <select id="selectorDifficulty" class="form-control">
+                    <option value="">全部难度</option>
+                    <option value="简单">简单</option>
+                    <option value="中等">中等</option>
+                    <option value="困难">困难</option>
+                </select>
+                <button id="loadQuestionsBtn" class="btn btn-primary">加载题目</button>
+            </div>
+
+            <div id="availableQuestions" class="questions-list"></div>
+        </div>
+
+        <div class="selected-questions">
+            <h3>已选题目 (<span id="selectedCount">0</span>)</h3>
+            <div id="selectedQuestionsList" class="questions-list"></div>
+        </div>
+
+        <div class="action-buttons">
+            <button id="generateManualBtn" class="btn btn-success">生成试卷</button>
+        </div>
+    </div>
+
+    <!-- 自动组卷 -->
+    <div id="autoMethod" class="method-content">
+        <div class="auto-config">
+            <h3>组卷设置</h3>
+
+            <div class="form-group">
+                <label>试卷名称：*</label>
+                <input type="text" id="autoPaperName" class="form-control" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>试卷尺寸：</label>
+                    <select id="autoPaperSize" class="form-control">
+                        <option value="A4">A4</option>
+                        <option value="A3">A3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>总分：</label>
+                    <input type="number" id="totalScore" class="form-control" value="100" min="1">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>题型：</label>
+                    <select id="autoQuestionType" class="form-control">
+                        <option value="">不限</option>
+                        <option value="选择题">选择题</option>
+                        <option value="填空题">填空题</option>
+                        <option value="判断题">判断题</option>
+                        <option value="解答题">解答题</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>难度：</label>
+                    <select id="autoDifficulty" class="form-control">
+                        <option value="">不限</option>
+                        <option value="简单">简单</option>
+                        <option value="中等">中等</option>
+                        <option value="困难">困难</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>知识点标签（多个用逗号分隔）：</label>
+                <input type="text" id="autoTags" class="form-control" placeholder="例如：代数,几何">
+            </div>
+
+            <div class="form-group">
+                <label>题目数量：</label>
+                <input type="number" id="questionCount" class="form-control" value="10" min="1" max="100">
+            </div>
+
+            <div class="action-buttons">
+                <button id="generateAutoBtn" class="btn btn-success">自动生成试卷</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 查看试卷 -->
+    <div id="viewMethod" class="method-content">
+        <div id="papersList"></div>
+    </div>
+</div>
+
+<!-- 试卷预览模态框 -->
+<div id="previewModal" class="modal">
+    <div class="modal-content modal-large">
+        <h3 id="previewTitle">试卷预览</h3>
+        <div id="previewContent"></div>
+        <div class="modal-actions">
+            <button id="exportWithAnswersBtn" class="btn btn-primary">导出（含答案）</button>
+            <button id="exportNoAnswersBtn" class="btn btn-primary">导出（不含答案）</button>
+            <button id="closePreviewBtn" class="btn btn-secondary">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/exam.js') }}"></script>
+{% endblock %}

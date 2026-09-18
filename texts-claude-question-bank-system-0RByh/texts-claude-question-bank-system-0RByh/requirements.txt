@@ -1,0 +1,28 @@
+# Web框架
+Flask==3.0.0
+Flask-CORS==4.0.0
+
+# 数据库
+SQLAlchemy==2.0.23
+
+# OCR相关
+paddleocr==2.7.3
+paddlepaddle==2.6.0
+opencv-python==4.8.1.78
+Pillow==10.1.0
+
+# PDF处理
+PyPDF2==3.0.1
+pdfplumber==0.10.3
+pdf2image==1.16.3
+
+# Word文档生成
+python-docx==1.1.0
+
+# AI相关
+anthropic>=0.18.0
+google-generativeai>=0.3.0
+
+# 工具库
+python-magic==0.4.27
+python-dotenv==1.0.0

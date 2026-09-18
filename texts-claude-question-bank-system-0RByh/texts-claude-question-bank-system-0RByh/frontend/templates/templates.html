@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}试卷模板 - 题库管理系统{% endblock %}
+
+{% block content %}
+<h2>试卷模板管理</h2>
+<p class="subtitle">使用预设模板快速生成规范试卷</p>
+
+<div class="toolbar">
+    <div class="filter-section">
+        <select id="categoryFilter" class="form-control">
+            <option value="">全部类别</option>
+            <option value="初中英语">初中英语</option>
+            <option value="高中英语">高中英语</option>
+            <option value="其他">其他</option>
+        </select>
+        <button id="filterBtn" class="btn btn-primary">筛选</button>
+    </div>
+    <div class="action-section">
+        <button id="createTemplateBtn" class="btn btn-success">创建自定义模板</button>
+    </div>
+</div>
+
+<div id="templatesList" class="templates-grid"></div>
+
+<!-- 模板详情模态框 -->
+<div id="templateModal" class="modal">
+    <div class="modal-content modal-large">
+        <h3 id="modalTitle">模板详情</h3>
+        <div id="templateDetails"></div>
+        <div class="modal-actions">
+            <button id="useTemplateBtn" class="btn btn-success">使用此模板生成试卷</button>
+            <button id="viewStatsBtn" class="btn btn-info">查看统计</button>
+            <button id="closeModalBtn" class="btn btn-secondary">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- 生成试卷模态框 -->
+<div id="generateModal" class="modal">
+    <div class="modal-content">
+        <h3>根据模板生成试卷</h3>
+        <div class="form-group">
+            <label>试卷名称：*</label>
+            <input type="text" id="paperName" class="form-control" placeholder="例如：2024年春季期中考试">
+        </div>
+        <p class="info-text">
+            ℹ️ 系统将根据模板定义的题型和数量要求，从题库中自动选择合适的题目组成试卷。
+            请确保题库中有足够的相应题型。
+        </p>
+        <div class="modal-actions">
+            <button id="confirmGenerateBtn" class="btn btn-success">生成试卷</button>
+            <button id="cancelGenerateBtn" class="btn btn-secondary">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 统计信息模态框 -->
+<div id="statsModal" class="modal">
+    <div class="modal-content">
+        <h3>模板统计信息</h3>
+        <div id="statsContent"></div>
+        <div class="modal-actions">
+            <button id="closeStatsBtn" class="btn btn-secondary">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/templates.js') }}"></script>
+{% endblock %}

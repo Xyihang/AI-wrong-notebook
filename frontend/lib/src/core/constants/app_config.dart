@@ -11,12 +11,21 @@ class AppConfig {
   ///   flutter build apk --dart-define=API_BASE_URL=http://192.168.31.236:8000/api
   /// 未指定时用 [defaultApiBaseUrl]（云端）。
   ///
-  /// 默认：腾讯云轻量服务器 Ubuntu-xx8Q（公网 123.207.238.74），Docker 后端监听 8000。
-  static const String defaultApiBaseUrl = 'http://123.207.238.74:8000/api';
+  /// 默认后端地址（远程配置拉取失败时的兜底）。
+  ///
+  /// 运行时优先使用远程配置仓库里的 apiBaseUrl（见 BackendConfigResolver），
+  /// 因此换服务器只需改配置仓库，不必重新打包。
+  static const String defaultApiBaseUrl = 'http://8.213.136.134/api';
 
   /// 构建期从 --dart-define=API_BASE_URL=... 注入；未指定时用 [defaultApiBaseUrl]。
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: defaultApiBaseUrl,
   );
+
+  /// 运行时实际使用的后端地址。
+  ///
+  /// App 启动时会尝试从远程配置仓库拉取最新地址（见 BackendConfigResolver），
+  /// 成功后覆盖此值；因此以后更换服务器**无需重新打包 App**。
+  static String currentBaseUrl = apiBaseUrl;
 }

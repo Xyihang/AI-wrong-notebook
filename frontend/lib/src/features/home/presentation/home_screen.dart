@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
 import 'package:smart_wrong_notebook/src/common/widgets/stats_chart.dart';
 import 'package:smart_wrong_notebook/src/data/services/question_analysis_coordinator.dart';
 import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
@@ -25,6 +26,8 @@ class HomeScreen extends ConsumerWidget {
     final dueAsync = ref.watch(dueReviewProvider);
     final analysisTasksAsync = ref.watch(backgroundAnalysisTasksProvider);
     final gamificationAsync = ref.watch(gamificationSnapshotProvider);
+    final auth = ref.watch(authControllerProvider);
+    final isGuest = auth is AuthGuest;
 
     // 新徽章解锁 → 弹「恭喜」（每枚只弹一次）。
     ref.listen(gamificationSnapshotProvider, (prev, next) {
@@ -54,6 +57,15 @@ class HomeScreen extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
         children: <Widget>[
+          if (isGuest) ...<Widget>[
+            _GuestBanner(
+              onLogin: () async {
+                await ref.read(authControllerProvider.notifier).logout();
+                if (context.mounted) context.go('/login');
+              },
+            ),
+            const SizedBox(height: 14),
+          ],
           gamificationAsync.when(
             data: (g) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
@@ -92,7 +104,7 @@ class HomeScreen extends ConsumerWidget {
             style: OutlinedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 46)),
           ),
-          const VisionQuotaCard(),
+          if (!isGuest) const VisionQuotaCard(),
           const SizedBox(height: 10),
           // 数据存储提示：本地保存，卸载/清数据会丢失，引导去设置导出备份
           _LocalDataNotice(onTap: () => context.go('/settings/data')),
@@ -750,6 +762,45 @@ class _LocalDataNotice extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 游客模式提示条：提醒登录以云端同步。
+class _GuestBanner extends StatelessWidget {
+  const _GuestBanner({required this.onLogin});
+
+  final VoidCallback onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: isDark ? const Color(0xFF1F2937) : const Color(0xFFEEF2FF),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: <Widget>[
+            const Icon(Icons.person_outline, size: 18, color: Color(0xFF4F46E5)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '游客模式：数据只保存在本机，建议登录后云端同步。',
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: isDark ? const Color(0xFFC7D2FE) : const Color(0xFF3730A3),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: onLogin,
+              child: const Text('去登录', style: TextStyle(fontSize: 12)),
+            ),
+          ],
         ),
       ),
     );

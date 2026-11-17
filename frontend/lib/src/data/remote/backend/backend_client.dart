@@ -5,11 +5,10 @@ import 'package:dio/dio.dart';
 import 'package:smart_wrong_notebook/src/core/constants/app_config.dart';
 import 'package:smart_wrong_notebook/src/data/remote/backend/auth_session_store.dart';
 
-/// REST API client for the backend (FastAPI), hosted on the cloud CVM.
+/// REST API client for the backend (FastAPI)。
 ///
-/// Base URL 锁死为 [AppConfig.apiBaseUrl]（云端 CVM），用户无需配置。
-/// 若要更换服务器，只需修改 `lib/src/core/constants/app_config.dart` 中的
-/// `AppConfig.apiBaseUrl` 一处即可。
+/// Base URL 取运行时值 [AppConfig.currentBaseUrl]：启动时可由远程配置仓库解析覆盖，
+/// 因此更换服务器无需重新打包 App（仍可用 --dart-define=API_BASE_URL 固定）。
 ///
 /// API contract (see docs/spec.md §7):
 /// - POST /ocr/recognize        multipart `file` -> {ocr_text, latex_text, blocks, confidence}
@@ -21,10 +20,10 @@ import 'package:smart_wrong_notebook/src/data/remote/backend/auth_session_store.
 /// - GET  /health               -> {status}
 class BackendClient {
   BackendClient({String? baseUrl, Dio? dio})
-      : baseUrl = _normalizeBaseUrl(baseUrl ?? AppConfig.apiBaseUrl),
+      : baseUrl = _normalizeBaseUrl(baseUrl ?? AppConfig.currentBaseUrl),
         _dio = dio ??
             Dio(BaseOptions(
-              baseUrl: _normalizeBaseUrl(baseUrl ?? AppConfig.apiBaseUrl),
+              baseUrl: _normalizeBaseUrl(baseUrl ?? AppConfig.currentBaseUrl),
               connectTimeout: const Duration(seconds: 10),
               receiveTimeout: const Duration(seconds: 120),
               sendTimeout: const Duration(seconds: 60),
@@ -65,9 +64,9 @@ class BackendClient {
     _dio.options.baseUrl = normalized;
   }
 
-  /// 返回当前后端基础地址（锁死为全局 [AppConfig.apiBaseUrl]）。
+  /// 返回当前后端基础地址（运行时值，可被远程配置覆盖）。
   Future<String> getBaseUrl() async {
-    return _normalizeBaseUrl(AppConfig.apiBaseUrl);
+    return _normalizeBaseUrl(AppConfig.currentBaseUrl);
   }
 
   /// Optional liveness probe. Returns true when the backend responds to

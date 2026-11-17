@@ -28,6 +28,14 @@ class AuthUnauthenticated extends AuthState {
   const AuthUnauthenticated();
 }
 
+/// 游客模式：未登录，数据只存本机；AI 使用用户自己配置的 Key（无额度限制）。
+///
+/// 每次启动 App 都不会自动恢复游客态——游客需在登录页重新选择，
+/// 并且进入时会收到「建议登录云端同步」的提醒。
+class AuthGuest extends AuthState {
+  const AuthGuest();
+}
+
 /// 认证操作结果。
 class AuthResult {
   const AuthResult.success()
@@ -154,6 +162,12 @@ class AuthController extends StateNotifier<AuthState> {
     } on BackendClientException catch (e) {
       return AuthResult.failure(e.message);
     }
+  }
+
+  /// 进入游客模式：清除 token（避免带旧凭证），状态置为游客。
+  Future<void> enterGuest() async {
+    await _clearSession();
+    _setState(const AuthGuest());
   }
 
   /// 退出登录：清除 token 与持久化会话。

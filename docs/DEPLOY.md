@@ -56,6 +56,39 @@ docker compose logs -f backend   # 查看日志
 镜像说明（`backend/Dockerfile`）：基于 `python:3.10-slim`，只装核心依赖；
 paddleocr/texify/torch 以注释形式预留为可选构建层（体积大），缺失时后端自动降级。
 
+### 1.3 当前线上部署（腾讯云轻量 · 韩国首尔）
+
+> 2026-10 起使用；1 vCPU/2 核 1 GiB 机型，为省内存**未用 Docker**，改为 venv + systemd。
+
+| 项 | 值 |
+|---|---|
+| 公网 IP | `8.213.136.134` |
+| 对外地址 | `http://8.213.136.134/api`（Caddy 80 端口纯 HTTP 反代 → `127.0.0.1:8000`） |
+| 代码目录 | `/opt/ai-wrong/backend` |
+| 运行方式 | systemd 服务 `ai-wrong`，`venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000` |
+| 环境变量 | `/opt/ai-wrong/backend/.env`（`LLM_API_KEY` / `MODEL` / `REGISTER_ENABLED=false` / 预置账号） |
+| 依赖 | `requirements-slim.txt`（无 Paddle/RapidOCR/ChromaDB；OCR 走视觉大模型兜底、向量检索走内存） |
+| 内存 | 已加 2 GiB swap |
+| 反向代理 | Caddy（`/etc/caddy/Caddyfile`，HTTP 80；HTTPS 配置备份 `Caddyfile.https.bak`） |
+
+常用运维：
+
+```bash
+systemctl status ai-wrong          # 状态
+journalctl -u ai-wrong -n 100 -f   # 日志
+systemctl restart ai-wrong         # 重启
+systemctl restart caddy            # 改反代后重启
+```
+
+**换后端地址无需重新打包 App**：修改配置仓库
+`https://github.com/Xyihang/ai-wrong-backend-config` 里的 `backend-config.json`：
+
+```json
+{ "apiBaseUrl": "http://新地址/api" }
+```
+
+App 每次启动会拉取（GitHub API → Gitee raw → GitHub raw），失败则用本地缓存/打包默认值。
+
 ## 2. Flutter 前端构建（跨端）
 
 前置：Flutter SDK ≥ 3.4（`flutter --version` 确认），Dart SDK ≥ 3.4。
@@ -67,8 +100,14 @@ flutter pub get
 # dart run build_runner build --delete-conflicting-outputs
 ```
 
-后端地址配置：在 App 设置页或 `lib/src/data/remote/backend/` 配置 `http://<后端IP>:8000`。
-真机调试时请填局域网 IP（如 `http://192.168.x.x:8000`），不要用 `localhost`。
+后端地址配置：App 启动会自动从远程配置仓库读取（见 §1.3），无需改代码。
+构建时也可用兜底参数固定地址：
+
+```bash
+flutter build apk --release --dart-define=API_BASE_URL=http://8.213.136.134/api
+```
+
+真机调试若连局域网后端，请填局域网 IP（如 `http://192.168.x.x:8000/api`），不要用 `localhost`。
 
 ### 2.1 Android（APK）
 

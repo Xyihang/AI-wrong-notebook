@@ -46,10 +46,17 @@ import 'package:smart_wrong_notebook/src/features/setup/setup_wizard_screen.dart
 import 'package:smart_wrong_notebook/src/features/achievements/presentation/achievements_screen.dart';
 import 'package:smart_wrong_notebook/src/features/paper/presentation/paper_setup_screen.dart';
 import 'package:smart_wrong_notebook/src/features/paper/presentation/paper_preview_screen.dart';
+import 'package:smart_wrong_notebook/src/data/remote/config/backend_config_resolver.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   KatexMathView.preload();
+
+  // 先从远程配置仓库解析后端地址（失败静默降级为缓存/打包默认值）。
+  // 这样以后换服务器只改配置仓库，无需重新打包 App。
+  try {
+    await BackendConfigResolver().resolve();
+  } catch (_) {}
 
   final navigatorKey = GlobalKey<NavigatorState>();
   final db = AppDatabase();
@@ -202,6 +209,10 @@ void main() async {
       GoRoute(
           path: '/paper/preview',
           builder: (context, state) => const PaperPreviewScreen()),
+      // 游客模式的 AI 服务配置页（未登录也可进入）。
+      GoRoute(
+          path: '/guest/provider',
+          builder: (context, state) => const ProviderConfigScreen()),
     ],
   );
 
@@ -248,8 +259,8 @@ void main() async {
   unawaited(analysisJobExecutor.initialize());
 }
 
-/// 认证路由守卫：未登录时只能访问公开页（splash/setup/onboarding/login/register），
-/// 其余路由重定向到登录页；已登录访问登录/注册页则回首页。
+/// 认证路由守卫：未登录时只能访问公开页（splash/setup/onboarding/login/register/guest-provider），
+/// 其余路由重定向到登录页；已登录/游客访问登录/注册页则回首页。
 String? Function(BuildContext, GoRouterState) _authRedirect(
     AuthController authController) {
   bool isPublic(String path) {
@@ -257,7 +268,8 @@ String? Function(BuildContext, GoRouterState) _authRedirect(
         path == '/setup' ||
         path == '/onboarding' ||
         path == '/login' ||
-        path == '/register';
+        path == '/register' ||
+        path == '/guest/provider';
   }
 
   return (context, state) {
@@ -265,7 +277,8 @@ String? Function(BuildContext, GoRouterState) _authRedirect(
     final path = state.matchedLocation;
     // 启动中：交由 SplashScreen 决定（其会等待 auth 加载完成再跳转）
     if (auth is AuthChecking) return null;
-    final authed = auth is AuthAuthenticated;
+    // 游客与正式登录都允许访问 App 内页面。
+    final authed = auth is AuthAuthenticated || auth is AuthGuest;
     if (authed) {
       if (path == '/login' || path == '/register') return '/';
       return null;

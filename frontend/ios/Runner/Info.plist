@@ -6,6 +6,8 @@
 	<string>拍照录题需要使用相机</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>从相册选择图片需要访问相册</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>保存裁剪后的题目图片需要写入相册</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

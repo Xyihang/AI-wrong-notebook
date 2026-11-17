@@ -42,17 +42,21 @@ class SettingsScreen extends ConsumerWidget {
                         ? (auth.session.displayName.isNotEmpty
                             ? auth.session.displayName
                             : auth.session.username)
-                        : '未登录',
+                        : auth is AuthGuest
+                            ? '游客模式'
+                            : '未登录',
                     style: const TextStyle(fontSize: 14),
                   ),
                   subtitle: Text(
                     auth is AuthAuthenticated
                         ? '@${auth.session.username}'
-                        : '登录后错题按账号隔离',
+                        : auth is AuthGuest
+                            ? '数据仅存本机，登录后可云端同步'
+                            : '登录后错题按账号隔离',
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),
-                if (auth is AuthAuthenticated) ...[
+                if (auth is AuthAuthenticated || auth is AuthGuest) ...<Widget>[
                   const Divider(
                       height: 1,
                       indent: 56,
@@ -65,7 +69,8 @@ class SettingsScreen extends ConsumerWidget {
                       iconColor: Color(0xFFDC2626),
                       lightBg: Color(0xFFFEF2F2),
                     ),
-                    title: Text('退出登录',
+                    title: Text(
+                        auth is AuthGuest ? '退出游客模式' : '退出登录',
                         style: TextStyle(
                             fontSize: 14, color: colorScheme.error)),
                     onTap: () async {

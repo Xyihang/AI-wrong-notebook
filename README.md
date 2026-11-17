@@ -16,9 +16,15 @@ needs.md       # 原始需求
 ## 快速导航
 - 功能规格与前后端接口契约：`docs/spec.md`
 - 实施计划与模块分工：`docs/plan.md`
-- 后端启动与 Docker 部署：`backend/README.md` 与 `docs/DEPLOY.md`
+- 后端启动与部署（含当前线上服务器）：`backend/README.md` 与 `docs/DEPLOY.md`
 - Flutter 各平台打包指南：`docs/DEPLOY.md`
+- iOS 打包教程（含签名/ATS 配置）：`docs/IOS-PACKAGING.md`
 - 架构图与核心模块说明：`docs/ARCHITECTURE.md`
+
+## 后端地址（无需重新打包即可更换）
+App 启动时会从配置仓库读取最新后端地址：
+`https://github.com/Xyihang/ai-wrong-backend-config` 的 `backend-config.json`
+（失败时使用本地缓存或打包默认值）。
 
 ## 技术栈
 | 层 | 技术 |

@@ -69,8 +69,30 @@ class LLMService:
     # ------------------------------------------------------------------ #
     # 底层对话
     # ------------------------------------------------------------------ #
-    def chat(self, system: str, user: str, max_tokens: int = 1500, temperature: float = 0.2) -> str:
-        return self.client.chat(system, user, max_tokens=max_tokens, temperature=temperature)
+    def chat(
+        self,
+        system: str,
+        user: str,
+        max_tokens: Optional[int] = None,
+        temperature: float = 0.2,
+    ) -> str:
+        """底层对话：默认使用 LLM_MAX_TOKENS；空内容时兜底到最大输出上限重试一次。"""
+        from app.core.config import settings
+
+        tokens = max_tokens or settings.LLM_MAX_TOKENS
+        raw = self.client.chat(system, user, max_tokens=tokens, temperature=temperature)
+        if not (raw or "").strip() and tokens < settings.LLM_MAX_TOKENS_FALLBACK:
+            logger.warning(
+                "LLM 返回空内容，使用最大输出上限重试: %s",
+                settings.LLM_MAX_TOKENS_FALLBACK,
+            )
+            raw = self.client.chat(
+                system,
+                user,
+                max_tokens=settings.LLM_MAX_TOKENS_FALLBACK,
+                temperature=temperature,
+            )
+        return raw
 
     # ------------------------------------------------------------------ #
     # 高层编排
@@ -79,7 +101,7 @@ class LLMService:
         self,
         ocr_text: str,
         subject: str = "",
-        max_tokens: int = 2000,
+        max_tokens: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         完整分析：OCR 文本 -> 结构化 QuestionRecord。
@@ -91,7 +113,7 @@ class LLMService:
             logger.info("LLM 不可用，降级为纯规则分析（仅存 OCR 文本）")
             return rule_based_analyze(ocr_text)
         try:
-            raw = self.client.chat(
+            raw = self.chat(
                 system_prompt(),
                 build_extraction_prompt(subject=subject, ocr_text=ocr_text),
                 max_tokens=max_tokens,
@@ -109,12 +131,12 @@ class LLMService:
         self,
         question_text: str,
         subject: str = "",
-        max_tokens: int = 1500,
+        max_tokens: Optional[int] = None,
     ) -> Dict[str, Any]:
         """对已确定的题干做解答分析（不依赖 OCR 降级）。"""
         if not self.available():
             raise LLMUnavailableError("LLM 未启用或未配置")
-        raw = self.client.chat(
+        raw = self.chat(
             system_prompt(),
             build_analysis_prompt(question_text=question_text, subject=subject),
             max_tokens=max_tokens,

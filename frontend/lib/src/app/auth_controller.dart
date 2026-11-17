@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
 import 'package:smart_wrong_notebook/src/data/remote/backend/auth_session_store.dart';
 import 'package:smart_wrong_notebook/src/data/remote/backend/backend_client.dart';
+import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
 import 'package:smart_wrong_notebook/src/data/repositories/settings_repository.dart';
 import 'package:smart_wrong_notebook/src/domain/models/auth_session.dart';
 
@@ -79,6 +80,7 @@ class AuthController extends StateNotifier<AuthState> {
 
   /// 启动时加载持久化会话并（尽力）校验。由 SplashScreen 调用一次。
   Future<void> load() async {
+    AiAnalysisService.directOnly = false;
     final stored = AuthSession.tryParse(
       await _settingsRepo.getString(authSessionKey),
     );
@@ -134,6 +136,7 @@ class AuthController extends StateNotifier<AuthState> {
         displayName: (user['display_name'] as String?) ?? '',
       );
       await _persist(session);
+      AiAnalysisService.directOnly = false;
       _setState(AuthAuthenticated(session));
       return const AuthResult.success();
     } on BackendClientException catch (e) {
@@ -165,13 +168,16 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   /// 进入游客模式：清除 token（避免带旧凭证），状态置为游客。
+  /// 游客使用自己的 AI Key 直连，AI 识别/解析不经过后端。
   Future<void> enterGuest() async {
     await _clearSession();
+    AiAnalysisService.directOnly = true;
     _setState(const AuthGuest());
   }
 
   /// 退出登录：清除 token 与持久化会话。
   Future<void> logout() async {
+    AiAnalysisService.directOnly = false;
     await _clearSession();
     _setState(const AuthUnauthenticated());
   }

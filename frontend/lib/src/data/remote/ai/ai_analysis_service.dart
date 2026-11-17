@@ -192,6 +192,10 @@ class AiAnalysisService {
 
   final SettingsRepository settingsRepository;
 
+  /// 仅直连模式：为 true 时 AI 识别/解析**完全不请求后端**，
+  /// 一律使用用户自己配置的模型直连（游客模式启用，避免占用平台额度）。
+  static bool directOnly = false;
+
   /// Backend REST client used for OCR / question structuring when available.
   /// When null, a default client (pointing at
   /// [AppConfig.apiBaseUrl]) is created lazily on first backend use.
@@ -537,11 +541,31 @@ class AiAnalysisService {
     }
   }
 
-  /// 模型是否具备视觉能力。DeepSeek 视觉模型名通常含 'vision'
-  /// （如 deepseek-v4-flash-vision-exp）；不含时视为非视觉模型，
-  /// 视觉模式将回退标准模式。
+  /// 模型是否具备视觉能力。
+  ///
+  /// DeepSeek 官方文档（Models & Pricing）显示 `deepseek-flash`
+  /// （V4.1-Flash-1017）**原生支持 Vision**；旧名 `deepseek-v4-flash*`
+  /// 也会被路由到该模型。因此模型名含 'vision' 或 'flash' 都视为支持视觉。
   bool _isVisionCapableModel(AiProviderConfig config) {
-    return config.model.toLowerCase().contains('vision');
+    final model = config.model.toLowerCase();
+    return model.contains('vision') || model.contains('flash');
+  }
+
+  /// 直连模式基础输出上限：官方最大输出（384K）的一半。
+  static const int baseDirectTokens = 192000;
+
+  /// 直连模式兜底输出上限（DeepSeek deepseek-flash 官方最大 384K）。
+  /// 仅作**上限**，不按此计费；实际按生成 token 数计费。
+  static const int maxDirectTokens = 384000;
+
+  /// DeepSeek 家族（flash / pro / chat）统一：请求的 max_tokens 小于基础值时
+  /// 抬到 [baseDirectTokens]；非 DeepSeek 模型保持调用方传入值（避免超出各家上限）。
+  int _resolveMaxTokens(AiProviderConfig config, int requested) {
+    final model = config.model.toLowerCase();
+    if (model.contains('deepseek') && requested < baseDirectTokens) {
+      return baseDirectTokens;
+    }
+    return requested;
   }
 
   /// 视觉模式：直接调用 DeepSeek 视觉模型读图并做题目结构化提取。
@@ -690,7 +714,8 @@ class AiAnalysisService {
 
     // Prefer the backend REST API when available; fall back to the direct
     // AI-vision path on failure so existing behavior is preserved.
-    if (File(imagePath).existsSync()) {
+    // 游客「仅直连」模式跳过后端，直接走用户自己的模型。
+    if (!directOnly && File(imagePath).existsSync()) {
       try {
         final record = await _backend.analyzeImage(
           imagePath,
@@ -722,7 +747,7 @@ class AiAnalysisService {
         prompt: _buildExtractionPrompt(
             subjectName: subjectName, textHint: textHint),
         imageBytes: imageBytes,
-        maxTokens: 1600,
+        maxTokens: directOnly ? 8000 : 1600,
         imageDetail: 'auto',
       );
       final extraction = _parseExtractionResponse(extractionContent);
@@ -892,7 +917,8 @@ class AiAnalysisService {
 
     // Prefer the backend REST API when an image is available; fall back to
     // the direct AI path on failure so existing behavior is preserved.
-    if (imagePath != null && File(imagePath).existsSync()) {
+    // 游客「仅直连」模式跳过后端。
+    if (!directOnly && imagePath != null && File(imagePath).existsSync()) {
       try {
         final record = await _backend.analyzeImage(
           imagePath,
@@ -913,7 +939,7 @@ class AiAnalysisService {
         debugPrint(
             '[AiAnalysisService] backend analysis failed, falling back to AI: $e');
       }
-    } else if (correctedText.trim().isNotEmpty) {
+    } else if (!directOnly && correctedText.trim().isNotEmpty) {
       // 无图片（纯文本路径）：也优先走后端 analyze-text，避免前端直连大模型
       // 的不稳定与多配置。后端不可用时才回退前端 AI。
       try {
@@ -979,7 +1005,7 @@ class AiAnalysisService {
             systemPrompt: systemPrompt,
             prompt: imagePrompt,
             imageBytes: imageBytes,
-            maxTokens: largeTokenMode
+            maxTokens: (largeTokenMode || directOnly)
                 ? 8000
                 : (isCompositeLanguageAnalysis || shouldAnalyzeImageFirst
                     ? 3000
@@ -1054,7 +1080,9 @@ class AiAnalysisService {
           config: config,
           systemPrompt: systemPrompt,
           prompt: prompt,
-          maxTokens: isCompositeLanguageAnalysis ? 3000 : 2000,
+          maxTokens: directOnly
+              ? 8000
+              : (isCompositeLanguageAnalysis ? 3000 : 2000),
         );
       } on DioException catch (e) {
         if (!_shouldRetryTextAnalysisWithCompact(e)) rethrow;
@@ -2356,6 +2384,8 @@ class AiAnalysisService {
     double temperature = 0.7,
   }) async {
     final dio = _createClient(config);
+    final isDeepSeek = config.model.toLowerCase().contains('deepseek');
+    final effectiveMax = _resolveMaxTokens(config, maxTokens);
     final response =
         await _retryPost(dio, '/chat/completions', data: <String, dynamic>{
       'model': config.model,
@@ -2364,10 +2394,24 @@ class AiAnalysisService {
         <String, String>{'role': 'user', 'content': prompt},
       ],
       'temperature': temperature,
-      'max_tokens': maxTokens,
+      'max_tokens': effectiveMax,
     });
 
-    return _extractContentFromResponse(response);
+    final content = _extractContentFromResponse(response);
+    // 思考型模型可能把额度耗在思考上导致 content 为空，
+    // 兜底用官方最大输出（384K）重试一次（仅上限，不按此计费）。
+    if (isDeepSeek && content.trim().isEmpty && effectiveMax < maxDirectTokens) {
+      debugPrint(
+          '[AiAnalysisService] empty content, retrying with max_tokens=$maxDirectTokens');
+      return _requestAiContent(
+        config: config,
+        systemPrompt: systemPrompt,
+        prompt: prompt,
+        maxTokens: maxDirectTokens,
+        temperature: temperature,
+      );
+    }
+    return content;
   }
 
   bool _usesOpenAiCompatibleChat(AiProviderConfig config) {
@@ -2394,6 +2438,8 @@ class AiAnalysisService {
     const mimeType = 'image/jpeg';
     final baseUrl = config.baseUrl.toLowerCase();
     final model = config.model.toLowerCase();
+    final isDeepSeek = model.contains('deepseek');
+    final effectiveMax = _resolveMaxTokens(config, maxTokens);
 
     if (_usesOpenAiCompatibleChat(config)) {
       final response =
@@ -2416,9 +2462,24 @@ class AiAnalysisService {
           },
         ],
         'temperature': temperature,
-        'max_tokens': maxTokens,
+        'max_tokens': effectiveMax,
       });
-      return _extractContentFromResponse(response);
+      final content = _extractContentFromResponse(response);
+      // 空内容兜底：用官方最大输出重试一次。
+      if (isDeepSeek && content.trim().isEmpty && effectiveMax < maxDirectTokens) {
+        debugPrint(
+            '[AiAnalysisService] empty image content, retrying with max_tokens=$maxDirectTokens');
+        return _requestAiContentWithImage(
+          config: config,
+          systemPrompt: systemPrompt,
+          prompt: prompt,
+          imageBytes: imageBytes,
+          maxTokens: maxDirectTokens,
+          imageDetail: imageDetail,
+          temperature: temperature,
+        );
+      }
+      return content;
     }
 
     if (model.contains('gemini') && !baseUrl.contains('openrouter')) {

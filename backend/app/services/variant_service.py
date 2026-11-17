@@ -17,15 +17,17 @@ def generate_one(
     difficulty: str = "中等",
     seed_stem: str = "",
     number: int = 1,
-    max_tokens: int = 1200,
+    max_tokens: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     生成一道变式题（返回规范化字段 dict：subject/knowledge_points/question_type/
     difficulty/stem/options/answer/analysis）。失败抛异常由调用方兜底。
+    max_tokens 默认取 settings.LLM_MAX_TOKENS（DeepSeek 官方上限的一半），
+    空内容由 llm_service.chat 兜底到最大上限。
     """
     if not llm_service.available():
         raise RuntimeError("LLM 未启用，无法生成变式题")
-    raw = llm_service.client.chat(
+    raw = llm_service.chat(
         system_prompt(),
         build_variant_prompt(
             subject=subject,

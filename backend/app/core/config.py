@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     # 多模态视觉模型（用于未装 PaddleOCR 时的图片读图兜底）
     VISION_MODEL: str = ""
     VISION_MAX_TOKENS: int = 1500
+    # 大模型输出上限（DeepSeek deepseek-flash / deepseek-v4-pro 官方最大 384K）。
+    # 基础值取官方最大的一半，空内容时兜底到 LLM_MAX_TOKENS_FALLBACK。
+    # 注意：max_tokens 只是上限，按实际生成 token 计费。
+    LLM_MAX_TOKENS: int = 192000
+    LLM_MAX_TOKENS_FALLBACK: int = 384000
 
     # --- 认证（JWT）---
     # JWT 签名密钥。留空时首次启动自动生成并持久化到 data/.jwt_secret，

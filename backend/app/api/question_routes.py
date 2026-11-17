@@ -32,6 +32,7 @@ from app.api.deps import (
     sync_question_to_vector,
     to_match_items,
 )
+from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.vision_rate_limiter import (
     NO_KEY_LIMIT,
@@ -197,7 +198,7 @@ async def analyze(
                         ocr_text = llm_service.recognize_image(
                             image_b64=image_b64,
                             mime_type=mime,
-                            max_tokens=int(os.getenv("VISION_MAX_TOKENS", "1500")),
+                            max_tokens=settings.LLM_MAX_TOKENS,
                         )
                         ocr_text = (ocr_text or "").strip()
                         if ocr_text:
@@ -236,7 +237,7 @@ async def analyze(
         # 2) LLM 可用 -> 抽取结构化；不可用 / 失败 -> 纯规则降级（仅存 OCR 文本）
         if llm_service.available():
             # 多题/长文本时用更大输出上限，避免 LLM 输出 JSON 被截断导致不完整
-            structure_max_tokens = 4000 if len(ocr_text) > 800 else 2000
+            structure_max_tokens = settings.LLM_MAX_TOKENS
             qdict = llm_service.analyze_question(
                 ocr_text=ocr_text, subject=subject, max_tokens=structure_max_tokens
             )

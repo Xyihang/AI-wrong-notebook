@@ -85,7 +85,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     // 已配置：模型支持视觉时走前端直连（不占平台额度）；
     // 不支持视觉时仍然放行，但明确提示拍照识别会回退平台兜底（有限额）。
-    final visionCapable = config.model.toLowerCase().contains('vision');
+    // deepseek-flash 官方支持 Vision（名字含 flash 也视为视觉模型）。
+    final visionCapable = config.model.toLowerCase().contains('vision') ||
+        config.model.toLowerCase().contains('flash');
     await repo.setUseVisionMode(visionCapable);
     await ref.read(authControllerProvider.notifier).enterGuest();
     if (!mounted) return;

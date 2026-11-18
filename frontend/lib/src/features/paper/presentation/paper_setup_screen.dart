@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
 import 'package:smart_wrong_notebook/src/data/remote/backend/backend_client.dart';
+import 'package:smart_wrong_notebook/src/domain/models/content_status.dart';
+import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
 import 'package:smart_wrong_notebook/src/domain/models/paper.dart';
 import 'package:smart_wrong_notebook/src/domain/models/subject.dart';
 
@@ -46,6 +49,14 @@ class _PaperSetupScreenState extends ConsumerState<PaperSetupScreen> {
       _error = null;
     });
     try {
+      // 游客（仅直连）模式：组卷完全在本地完成，不请求后端。
+      if (AiAnalysisService.directOnly) {
+        final paper = await _generatePaperLocally(subject);
+        ref.read(currentPaperProvider.notifier).state = paper;
+        if (!mounted) return;
+        context.push('/paper/preview');
+        return;
+      }
       final resp = await BackendClient().generatePaper(
         subject: subject.name,
         knowledgePoints: _kps,
@@ -67,6 +78,80 @@ class _PaperSetupScreenState extends ConsumerState<PaperSetupScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// 本地组卷：优先本地错题 + 用自己的模型直连生成变式补齐（不经过后端）。
+  Future<PaperResult> _generatePaperLocally(Subject subject) async {
+    final repo = ref.read(questionRepositoryProvider);
+    final all = await repo.listAll();
+    final kps = _kps;
+    final candidates = all.where((q) {
+      if (q.contentStatus != ContentStatus.ready) return false;
+      if (q.subject != subject) return false;
+      if (kps.isNotEmpty &&
+          !q.aiKnowledgePoints.any((k) => kps.any((w) => k.contains(w)))) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    int rank(MasteryLevel m) => switch (m) {
+          MasteryLevel.newQuestion => 0,
+          MasteryLevel.reviewing => 1,
+          MasteryLevel.mastered => 2,
+        };
+    candidates.sort((a, b) => rank(a.masteryLevel).compareTo(rank(b.masteryLevel)));
+
+    String textOf(dynamic q) => q.normalizedQuestionText.trim().isNotEmpty
+        ? q.normalizedQuestionText.trim()
+        : q.extractedQuestionText.trim();
+
+    final questions = <PaperQuestion>[];
+    for (final q in candidates) {
+      if (questions.length >= _count) break;
+      final text = textOf(q);
+      if (text.isEmpty) continue;
+      final a = q.analysisResult;
+      questions.add(PaperQuestion(
+        stem: text,
+        options: const <String>[],
+        answer: a?.finalAnswer ?? '',
+        analysis: (a?.steps ?? const <String>[])
+            .where((s) => s.isNotEmpty)
+            .join('\n'),
+        difficulty: _difficulty ?? '中等',
+        knowledgePoints: List<String>.from(q.aiKnowledgePoints),
+        questionType: '',
+        source: 'existing',
+        sourceQuestionId: q.id,
+      ));
+    }
+
+    final ai = AiAnalysisService(
+      settingsRepository: ref.read(settingsRepositoryProvider),
+    );
+    final seed = candidates.isEmpty ? '' : textOf(candidates.first);
+    const diffs = <String>['简单', '中等', '困难'];
+    for (var i = questions.length; i < _count; i++) {
+      final variant = await ai.generateVariantQuestionDirect(
+        subjectName: subject.label,
+        knowledgePoints: kps,
+        difficulty: _difficulty ?? diffs[(i - questions.length) % diffs.length],
+        seedStem: seed,
+      );
+      if (variant != null) questions.add(variant);
+    }
+    if (questions.isEmpty) {
+      throw Exception('该条件下没有可用错题，AI 变式也未生成成功');
+    }
+    const order = <String, int>{'简单': 0, '中等': 1, '困难': 2};
+    questions.sort((a, b) =>
+        (order[a.difficulty] ?? 1).compareTo(order[b.difficulty] ?? 1));
+    return PaperResult(
+      title: '${subject.label} · AI 变式组卷（本地）',
+      subject: subject.name,
+      questions: questions,
+    );
   }
 
   @override

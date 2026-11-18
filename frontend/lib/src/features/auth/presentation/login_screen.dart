@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/core/constants/app_config.dart';
+import 'package:smart_wrong_notebook/src/data/remote/config/backend_config_resolver.dart';
 import 'package:smart_wrong_notebook/src/features/auth/presentation/auth_theme.dart';
 
 /// 登录页。
@@ -31,6 +33,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _submit() async {
     if (_submitting) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    // 地址只能由 App 自动获取；若尚未取到则再试一次（不允许用户手动填写）。
+    if (AppConfig.currentBaseUrl.trim().isEmpty) {
+      await BackendConfigResolver().resolve();
+      if (AppConfig.currentBaseUrl.trim().isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('暂时无法获取服务器地址，请检查网络后重试'),
+          ),
+        );
+        return;
+      }
+    }
     setState(() => _submitting = true);
     final result = await ref
         .read(authControllerProvider.notifier)
@@ -102,7 +117,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             '· 文字类分析会使用你自己的 Key（无平台额度限制）；\n'
             '· 拍照读图可能会回退到平台视觉兜底（有额度限制）。\n\n'
             '想完全无限制，请在「AI 服务配置」里换成视觉模型'
-            '（如 deepseek-v4-flash-vision-exp）。',
+            '（如 deepseek-flash，已原生支持视觉）。',
           ),
           actions: [
             FilledButton(
@@ -115,28 +130,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
     }
 
-    final goLogin = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (c) => AlertDialog(
-        title: const Text('游客模式'),
-        content: const Text(
-          '你正以游客身份使用：错题与数据只保存在本机，卸载/换机不会保留。\n'
-          '建议登录账号，以便云端同步、多设备使用。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: const Text('继续游客'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(c, true),
-            child: const Text('去登录'),
-          ),
-        ],
-      ),
-    );
-    if (!mounted || goLogin == true) return;
+    // 「建议登录」提示框改在首页弹出：进入游客态后路由会立刻重定向到首页，
+    // 若在此处弹窗会被登录页销毁一起带走（表现为一闪而过）。
+    if (!mounted) return;
     context.go('/');
   }
 

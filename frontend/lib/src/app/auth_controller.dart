@@ -5,6 +5,8 @@ import 'package:smart_wrong_notebook/src/app/providers.dart';
 import 'package:smart_wrong_notebook/src/data/remote/backend/auth_session_store.dart';
 import 'package:smart_wrong_notebook/src/data/remote/backend/backend_client.dart';
 import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
+import 'package:smart_wrong_notebook/src/data/remote/config/backend_config_resolver.dart';
+import 'package:smart_wrong_notebook/src/core/constants/app_config.dart';
 import 'package:smart_wrong_notebook/src/data/repositories/settings_repository.dart';
 import 'package:smart_wrong_notebook/src/domain/models/auth_session.dart';
 
@@ -121,7 +123,29 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   /// 登录。成功持久化会话并更新状态。
+  ///
+  /// 网络类失败时自动重新拉取远程后端地址并重试一次（换服务器后旧地址失效的场景）。
   Future<AuthResult> login(String username, String password) async {
+    try {
+      return await _loginOnce(username, password);
+    } on BackendClientException catch (e) {
+      if (!_isConnectivityError(e.message)) {
+        return AuthResult.failure(e.message);
+      }
+      try {
+        await BackendConfigResolver().resolve();
+      } catch (_) {}
+      try {
+        return await _loginOnce(username, password);
+      } on BackendClientException catch (e2) {
+        return AuthResult.failure(
+          '${e2.message}\n当前后端地址：${AppConfig.currentBaseUrl}',
+        );
+      }
+    }
+  }
+
+  Future<AuthResult> _loginOnce(String username, String password) async {
     try {
       final data = await _backendClient.login(username.trim(), password);
       final token = data['access_token'];
@@ -142,6 +166,15 @@ class AuthController extends StateNotifier<AuthState> {
     } on BackendClientException catch (e) {
       return AuthResult.failure(e.message);
     }
+  }
+
+  bool _isConnectivityError(String message) {
+    final m = message.toLowerCase();
+    return m.contains('超时') ||
+        m.contains('timeout') ||
+        m.contains('网络') ||
+        m.contains('连接') ||
+        m.contains('socket');
   }
 
   /// 注册：先注册，成功后自动登录。

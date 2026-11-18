@@ -169,9 +169,16 @@ async def analyze(
     # 这里校验完整性，任一核心字段为空则重新视觉识别 + 重试结构化。
     attempt = 0
     qdict: dict = {}
+    vision_charged = False   # 本次请求是否已扣过视觉额度（重试不再重复扣）
+    ocr_from_vision = False  # 当前 ocr_text 是否来自视觉识别
     while True:
-        # 1) 需要走视觉兜底：OCR 质量差（首次）或 结果不完整（重试时重新读图）
-        need_vision = ocr_quality_poor or attempt > 0
+        # 1) 需要走视觉兜底：仅「首次 OCR 质量差」或「当前没有可用的 OCR 文本」。
+        #    已有视觉 OCR 文本时，完整性重试只重新做结构化，不再重新读图/扣额度
+        #    （修复「一张图被扣多次额度」的问题）。
+        need_vision = (
+            (ocr_quality_poor or attempt > 0)
+            and (not ocr_text.strip() or not ocr_from_vision)
+        )
         vision_allowed = True
         if need_vision:
             vision_used = False
@@ -183,9 +190,16 @@ async def analyze(
             # 注意：**只有真正走视觉兜底（视觉模型可用且还有额度）时才扣减额度**；
             # 纯本地 OCR（质量良好）或视觉模型不可用一律不扣。
             if vision_available:
-                vision_allowed = try_consume_vision_slot(
-                    client_ip, has_vision_key, user_id=uid, use_vision_mode=use_vision_mode
-                )
+                if vision_charged:
+                    # 同一次请求内已计费：重试直接复用，不再扣额度
+                    vision_allowed = True
+                else:
+                    vision_allowed = try_consume_vision_slot(
+                        client_ip, has_vision_key, user_id=uid,
+                        use_vision_mode=use_vision_mode,
+                    )
+                    if vision_allowed:
+                        vision_charged = True
                 if not vision_allowed:
                     logger.info(
                         "IP %s 用户(has_key=%s vision_mode=%s user_id=%s) 视觉兜底已达上限，跳过视觉兜底，回退标准模式",
@@ -203,6 +217,7 @@ async def analyze(
                         ocr_text = (ocr_text or "").strip()
                         if ocr_text:
                             vision_used = True
+                            ocr_from_vision = True
                             logger.info(
                                 "视觉大模型读图兜底成功（IP %s has_key=%s vision_mode=%s user_id=%s 剩余 %d 次）",
                                 client_ip, has_vision_key, use_vision_mode, uid,
@@ -239,7 +254,15 @@ async def analyze(
             # 多题/长文本时用更大输出上限，避免 LLM 输出 JSON 被截断导致不完整
             structure_max_tokens = settings.LLM_MAX_TOKENS
             qdict = llm_service.analyze_question(
-                ocr_text=ocr_text, subject=subject, max_tokens=structure_max_tokens
+                ocr_text=ocr_text,
+                subject=subject,
+                max_tokens=structure_max_tokens,
+                extra_instruction=(
+                    "特别注意：上一轮结构化结果缺少答案/解析/知识点中的部分字段。"
+                    "请务必基于 OCR 文本补全这些字段，并只输出完整合法的 JSON。"
+                    if attempt > 0
+                    else ""
+                ),
             )
         else:
             qdict = llm_service.rule_analyze(ocr_text)

@@ -167,13 +167,17 @@ class ProviderPageState extends ConsumerState<ProviderPage>
       _modelController.text = selected;
       _statusMessage = null;
     });
-    // DeepSeek 下选择模型时，提醒选择视觉模型（含 vision 才能读图）
+    // DeepSeek 下选择模型时提醒：deepseek-flash / 含 vision 的都支持读图
     final isDeepSeek =
         _urlController.text.toLowerCase().contains('deepseek') ||
         selected.toLowerCase().contains('deepseek');
-    if (isDeepSeek && !selected.toLowerCase().contains('vision')) {
+    final selectedModel = selected.toLowerCase();
+    final visionCapable = selectedModel.contains('vision') ||
+        selectedModel.contains('flash');
+    if (isDeepSeek && !visionCapable) {
       _showStatus(
-        '当前模型 $selected 可能不支持图片识别。若需「拍照读题」，请选择含 vision 的视觉模型（如 deepseek-v4-flash-vision-exp）。',
+        '当前模型 $selected 可能不支持图片识别。DeepSeek 的 deepseek-flash 已原生支持视觉；'
+        '其它服务商请选择含 vision 的视觉模型。',
       );
     }
   }

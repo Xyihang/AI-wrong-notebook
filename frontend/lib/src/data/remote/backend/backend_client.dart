@@ -29,9 +29,24 @@ class BackendClient {
               sendTimeout: const Duration(seconds: 60),
             )) {
     // 自动附带登录 token：已登录时给所有请求加 Authorization: Bearer <token>。
+    // 同时**每次请求都同步最新的后端地址**（远程配置可能随时更换），
+    // 地址为空时给出明确错误，避免请求打到空主机。
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
+          final current = _normalizeBaseUrl(AppConfig.currentBaseUrl);
+          if (current.isNotEmpty && !options.path.startsWith('http')) {
+            options.baseUrl = current;
+          }
+          if (current.isEmpty && !options.path.startsWith('http')) {
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                error: '尚未获取到后端地址，请检查网络后重试，或手动填写服务器地址',
+              ),
+            );
+            return;
+          }
           final token = AuthSessionStore.currentToken;
           if (token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
@@ -439,7 +454,7 @@ class BackendClient {
       buffer.write(': 请求超时，请确认后端服务已启动');
     } else if (e.type == DioExceptionType.connectionError) {
       buffer.write(
-          ': 无法连接后端服务（$baseUrl），请确认后端已启动且地址正确');
+          ': 无法连接后端服务（${_normalizeBaseUrl(AppConfig.currentBaseUrl)}），请确认后端已启动且地址正确');
     } else if (e.response != null) {
       final status = e.response!.statusCode;
       final body = e.response!.data;

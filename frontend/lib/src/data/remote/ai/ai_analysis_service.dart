@@ -8,6 +8,7 @@ import 'package:smart_wrong_notebook/src/data/repositories/settings_repository.d
 import 'package:smart_wrong_notebook/src/domain/models/ai_provider_config.dart';
 import 'package:smart_wrong_notebook/src/domain/models/analysis_result.dart';
 import 'package:smart_wrong_notebook/src/domain/models/generated_exercise.dart';
+import 'package:smart_wrong_notebook/src/domain/models/paper.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_split_result.dart';
 import 'package:smart_wrong_notebook/src/domain/models/subject.dart';
@@ -195,6 +196,10 @@ class AiAnalysisService {
   /// 仅直连模式：为 true 时 AI 识别/解析**完全不请求后端**，
   /// 一律使用用户自己配置的模型直连（游客模式启用，避免占用平台额度）。
   static bool directOnly = false;
+
+  /// 当前分析阶段（供加载页展示真实进度）：
+  /// 0=读取图片 1=识别题干 2=解题分析 3=整理知识点。
+  static final ValueNotifier<int> analysisStage = ValueNotifier<int>(0);
 
   /// Backend REST client used for OCR / question structuring when available.
   /// When null, a default client (pointing at
@@ -579,21 +584,40 @@ class AiAnalysisService {
     if (config == null) return null;
     if (!_isVisionCapableModel(config)) {
       debugPrint(
-          '[AiAnalysisService] vision mode: 模型 ${config.model} 可能不是视觉模型，回退标准模式');
+          '[AiAnalysisService] vision mode: 模型 ${config.model} 非视觉模型（需含 vision/flash），回退标准模式');
       return null;
     }
 
     final imageBytes = await File(imagePath).readAsBytes();
-    final content = await _requestAiContentWithImage(
+    final basePrompt = _buildExtractionPrompt(
+        subjectName: subjectName, textHint: textHint);
+    var content = await _requestAiContentWithImage(
       config: config,
       systemPrompt: await _loadExtractionSystemPrompt(),
-      prompt: _buildExtractionPrompt(
-          subjectName: subjectName, textHint: textHint),
+      prompt: basePrompt,
       imageBytes: imageBytes,
       maxTokens: 8000, // 大 token 以兼容推理模型 content 截断
       imageDetail: 'auto',
     );
-    final extraction = _parseExtractionResponse(content);
+    var extraction = _parseExtractionResponse(content);
+    // 模型偶发返回全空字段：再试一次并明确要求输出题干文字（避免无谓回退后端）。
+    if (extraction.extractedQuestionText.trim().isEmpty &&
+        extraction.normalizedQuestionText.trim().isEmpty) {
+      debugPrint(
+          '[AiAnalysisService] vision mode: 首次返回为空，重试一次并要求输出题干文字');
+      content = await _requestAiContentWithImage(
+        config: config,
+        systemPrompt: await _loadExtractionSystemPrompt(),
+        prompt:
+            '$basePrompt\n\n上次你没有返回任何题干文字。请仔细查看图片，把图中题目文字完整写入 '
+            'extractedQuestionText 与 normalizedQuestionText；若图中确实没有可识别的题目文字，'
+            '才返回空字符串。',
+        imageBytes: imageBytes,
+        maxTokens: 8000,
+        imageDetail: 'high',
+      );
+      extraction = _parseExtractionResponse(content);
+    }
     if (extraction.extractedQuestionText.trim().isEmpty &&
         extraction.normalizedQuestionText.trim().isEmpty &&
         textHint.trim().isEmpty) {
@@ -615,7 +639,7 @@ class AiAnalysisService {
     if (config == null) return null;
     if (!_isVisionCapableModel(config)) {
       debugPrint(
-          '[AiAnalysisService] vision mode: 模型 ${config.model} 可能不是视觉模型，回退标准模式');
+          '[AiAnalysisService] vision mode: 模型 ${config.model} 非视觉模型（需含 vision/flash），回退标准模式');
       return null;
     }
 
@@ -679,6 +703,7 @@ class AiAnalysisService {
     String textHint = '',
   }) async {
     debugPrint('[AiAnalysisService] extractQuestionStructure called');
+    analysisStage.value = 1;
 
     // 视觉模式分流：用户启用视觉模型（use_vision_mode）且配置的是 DeepSeek
     // Key 时，直接前端直连 DeepSeek 视觉模型读图（不经过云端后端）；
@@ -885,6 +910,7 @@ class AiAnalysisService {
     String? imagePath,
   }) async {
     debugPrint('[AiAnalysisService] analyzeExtractedQuestion called');
+    analysisStage.value = 2;
 
     // 视觉模式分流：用户启用视觉模型（use_vision_mode）、配置的是 DeepSeek
     // Key 且有图片时，直接前端直连 DeepSeek 视觉模型读图解题（不经过云端
@@ -1164,6 +1190,82 @@ class AiAnalysisService {
     } catch (e) {
       debugPrint('[AiAnalysisService] matchSimilarQuestions failed: $e');
       throw AiAnalysisException('匹配同类题失败: $e');
+    }
+  }
+
+  /// 直连生成一道变式题（游客模式/无后端时供「AI 变式组卷」使用）。
+  ///
+  /// 只走用户自己的模型（不请求后端）；失败返回 null，由调用方跳过。
+  Future<PaperQuestion?> generateVariantQuestionDirect({
+    required String subjectName,
+    required List<String> knowledgePoints,
+    required String difficulty,
+    String seedStem = '',
+  }) async {
+    try {
+      final config = await _requireConfig();
+      final kpText = knowledgePoints.isEmpty ? '该学科核心考点' : knowledgePoints.join('、');
+      final kpJson = knowledgePoints.map((e) => '"${e.replaceAll('"', '')}"').join(',');
+      final seed = seedStem.trim();
+      final seedHint = seed.isEmpty
+          ? '请出一道该知识点下典型、条件自洽的题目。'
+          : '请参考下面这道原题，做一道同知识点、但数字/条件/问法不同的变式题（不要照抄原题）：\n$seed';
+      final prompt = '''学科：$subjectName
+知识点：$kpText
+难度：$difficulty
+
+$seedHint
+
+请只输出一个 JSON 对象（不要输出其它文字），字段：
+{"stem":"题干","options":[],"answer":"答案","analysis":"关键步骤解析","difficulty":"$difficulty","knowledge_points":[$kpJson],"question_type":"单选题/填空题/解答题"}''';
+      final content = await _requestAiContent(
+        config: config,
+        systemPrompt: '你是一名资深中小学教师，负责出题。只输出严格 JSON。',
+        prompt: prompt,
+        maxTokens: 4000,
+      );
+      final map = _decodeJsonObject(content);
+      if (map == null) return null;
+      final stem = (map['stem'] as String?)?.trim() ?? '';
+      if (stem.isEmpty) return null;
+      final options =
+          (map['options'] as List?)?.whereType<Object>().map((e) => e.toString()).toList() ??
+              const <String>[];
+      final kps = (map['knowledge_points'] as List?)
+              ?.whereType<Object>()
+              .map((e) => e.toString())
+              .toList() ??
+          knowledgePoints;
+      return PaperQuestion(
+        stem: stem,
+        options: options,
+        answer: (map['answer'] as String?) ?? '',
+        analysis: (map['analysis'] as String?) ?? '',
+        difficulty: (map['difficulty'] as String?) ?? difficulty,
+        knowledgePoints: kps,
+        questionType: (map['question_type'] as String?) ?? '',
+        source: 'ai',
+      );
+    } catch (e) {
+      debugPrint('[AiAnalysisService] generateVariantQuestionDirect failed: $e');
+      return null;
+    }
+  }
+
+  /// 从模型返回文本中提取 JSON 对象（容忍 ```json 代码块与前后说明文字）。
+  Map<String, dynamic>? _decodeJsonObject(String content) {
+    final text = content.trim();
+    if (text.isEmpty) return null;
+    final fenced = RegExp(r'```(?:json)?\s*([\s\S]*?)```').firstMatch(text);
+    final candidate = fenced?.group(1)?.trim() ?? text;
+    final start = candidate.indexOf('{');
+    final end = candidate.lastIndexOf('}');
+    if (start < 0 || end <= start) return null;
+    try {
+      final decoded = jsonDecode(candidate.substring(start, end + 1));
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
     }
   }
 

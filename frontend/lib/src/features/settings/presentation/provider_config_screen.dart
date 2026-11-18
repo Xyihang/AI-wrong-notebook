@@ -219,15 +219,19 @@ class _ProviderConfigScreenState extends ConsumerState<ProviderConfigScreen> {
       _modelController.text = selected;
       _connectionStatus = null;
     });
-    // DeepSeek 下选择模型时，提醒用户选择视觉模型（含 vision 的模型才能读图）
+    // DeepSeek 下选择模型时提醒：deepseek-flash / 含 vision 的都支持读图
     final isDeepSeekNow =
         _urlController.text.toLowerCase().contains('deepseek') ||
         selected.toLowerCase().contains('deepseek');
-    if (isDeepSeekNow && !selected.toLowerCase().contains('vision')) {
+    final selectedModel = selected.toLowerCase();
+    final visionCapable = selectedModel.contains('vision') ||
+        selectedModel.contains('flash');
+    if (isDeepSeekNow && !visionCapable) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '当前模型 $selected 可能不支持图片识别。若需「拍照读题」，请选择含 vision 的视觉模型（如 deepseek-v4-flash-vision-exp）。',
+            '当前模型 $selected 可能不支持图片识别。DeepSeek 的 deepseek-flash 已原生支持视觉；'
+            '其它服务商请选择含 vision 的视觉模型。',
           ),
           duration: const Duration(seconds: 4),
         ),
@@ -249,13 +253,17 @@ class _ProviderConfigScreenState extends ConsumerState<ProviderConfigScreen> {
       _modelController.text = selected.trim();
       _connectionStatus = null;
     });
-    // DeepSeek 手动输入模型时，提醒选择视觉模型
+    // DeepSeek 手动输入模型时提醒：deepseek-flash / 含 vision 的都支持读图
+    final manualModel = selected.toLowerCase();
+    final manualVisionCapable =
+        manualModel.contains('vision') || manualModel.contains('flash');
     if (_urlController.text.toLowerCase().contains('deepseek') &&
-        !selected.toLowerCase().contains('vision')) {
+        !manualVisionCapable) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '当前模型 $selected 可能不支持图片识别。若需「拍照读题」，请使用含 vision 的视觉模型（如 deepseek-v4-flash-vision-exp）。',
+            '当前模型 $selected 可能不支持图片识别。DeepSeek 的 deepseek-flash 已原生支持视觉；'
+            '其它服务商请选择含 vision 的视觉模型。',
           ),
           duration: const Duration(seconds: 4),
         ),

@@ -102,20 +102,25 @@ class LLMService:
         ocr_text: str,
         subject: str = "",
         max_tokens: Optional[int] = None,
+        extra_instruction: str = "",
     ) -> Dict[str, Any]:
         """
         完整分析：OCR 文本 -> 结构化 QuestionRecord。
 
         LLM 可用：抽取 prompt -> chat -> 稳健 JSON 解析 -> 与 OCR 合并补齐。
         LLM 不可用 / 调用失败：自动降级为 rule_based_analyze（仅存 OCR 文本）。
+        [extra_instruction] 用于完整性重试时追加的强调指令。
         """
         if not self.available():
             logger.info("LLM 不可用，降级为纯规则分析（仅存 OCR 文本）")
             return rule_based_analyze(ocr_text)
         try:
+            prompt = build_extraction_prompt(subject=subject, ocr_text=ocr_text)
+            if extra_instruction.strip():
+                prompt = f"{prompt}\n\n{extra_instruction.strip()}"
             raw = self.chat(
                 system_prompt(),
-                build_extraction_prompt(subject=subject, ocr_text=ocr_text),
+                prompt,
                 max_tokens=max_tokens,
             )
             question = parse_question_json(raw)

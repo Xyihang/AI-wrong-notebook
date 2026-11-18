@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/core/constants/app_config.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -230,6 +232,31 @@ class SettingsScreen extends ConsumerWidget {
                   onTap: () => context.push('/achievements'),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // 诊断：当前实际使用的后端地址（换服务器排查用）
+          Text('诊断',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          _SettingsSection(
+            child: _SettingsListItem(
+              icon: CupertinoIcons.link,
+              iconColor: const Color(0xFF0EA5E9),
+              lightIconBg: const Color(0xFFF0F9FF),
+              title: '后端地址',
+              subtitle: AppConfig.currentBaseUrl,
+              onTap: () async {
+                await Clipboard.setData(
+                  ClipboardData(text: AppConfig.currentBaseUrl),
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('后端地址已复制')),
+                  );
+                }
+              },
             ),
           ),
         ],

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
 import 'package:smart_wrong_notebook/src/data/remote/backend/backend_client.dart';
 import 'package:smart_wrong_notebook/src/domain/models/paper.dart';
 
@@ -13,12 +14,59 @@ import 'package:smart_wrong_notebook/src/domain/models/paper.dart';
 class PaperPreviewScreen extends ConsumerWidget {
   const PaperPreviewScreen({super.key});
 
+  /// 游客（仅直连）模式：不依赖后端，导出为本地文本文件并分享。
+  Future<void> _exportTextLocally(
+    BuildContext context,
+    PaperResult paper, {
+    required bool includeAnswers,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final buf = StringBuffer()
+        ..writeln(paper.title)
+        ..writeln('共 ${paper.questions.length} 题')
+        ..writeln();
+      for (var i = 0; i < paper.questions.length; i++) {
+        final q = paper.questions[i];
+        buf.writeln('${i + 1}. ${q.stem}');
+        for (final opt in q.options) {
+          buf.writeln('   $opt');
+        }
+        if (includeAnswers) {
+          buf.writeln('【答案】${q.answer}');
+          if (q.analysis.isNotEmpty) buf.writeln('【解析】${q.analysis}');
+        }
+        buf.writeln();
+      }
+      final dir = await getTemporaryDirectory();
+      final path =
+          '${dir.path}/ai_paper_${DateTime.now().millisecondsSinceEpoch}.txt';
+      await File(path).writeAsString(buf.toString(), flush: true);
+      Rect? origin;
+      final renderBox = context.findRenderObject();
+      if (renderBox is RenderBox && renderBox.hasSize) {
+        origin = renderBox.localToGlobal(Offset.zero) & renderBox.size;
+      }
+      await Share.shareXFiles(
+        <XFile>[XFile(path, mimeType: 'text/plain')],
+        sharePositionOrigin: origin,
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('导出失败：$e')));
+    }
+  }
+
   Future<void> _exportPdf(
     BuildContext context,
     PaperResult paper, {
     required bool includeAnswers,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
+    // 游客模式不使用后端：导出为本地文本（避免依赖后端 PDF 服务）。
+    if (AiAnalysisService.directOnly) {
+      await _exportTextLocally(context, paper, includeAnswers: includeAnswers);
+      return;
+    }
     try {
       messenger.showSnackBar(const SnackBar(content: Text('正在生成 PDF…')));
       final bytes = await BackendClient().exportPaperPdf(

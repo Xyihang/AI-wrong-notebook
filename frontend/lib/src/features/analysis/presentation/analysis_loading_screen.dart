@@ -19,39 +19,15 @@ class AnalysisLoadingScreen extends ConsumerStatefulWidget {
 class _AnalysisLoadingScreenState extends ConsumerState<AnalysisLoadingScreen> {
   String? _errorMessage;
   String? _debugInfo;
-  int _step = 0;
   String? _progressText;
   bool _canContinueInBackground = false;
-  Timer? _stepTimer;
-
-  final _steps = const ['正在识别题目...', '正在理解题意...', '正在生成解析...', '即将完成...'];
 
   @override
   void initState() {
     super.initState();
+    // 每次进入加载页都从「读取图片」阶段开始。
+    AiAnalysisService.analysisStage.value = 0;
     _runAnalysis();
-    _animateSteps();
-  }
-
-  void _animateSteps() {
-    _stepTimer?.cancel();
-    _stepTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if (_step < _steps.length - 1) {
-        setState(() => _step++);
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _stepTimer?.cancel();
-    super.dispose();
   }
 
   Future<void> _runAnalysis() async {
@@ -96,7 +72,6 @@ class _AnalysisLoadingScreenState extends ConsumerState<AnalysisLoadingScreen> {
           onProgress: (completed, total, {int failed = 0}) {
             if (!mounted) return;
             setState(() {
-              _stepTimer?.cancel();
               if (completed == 0) {
                 _progressText = '正在依次分析 $total 道题...';
                 return;
@@ -116,7 +91,6 @@ class _AnalysisLoadingScreenState extends ConsumerState<AnalysisLoadingScreen> {
           .read(visionQuotaRefreshProvider.notifier)
           .update((state) => state + 1);
 
-      _stepTimer?.cancel();
       context.go('/analysis/result');
     } on AiAnalysisException catch (e) {
       if (mounted) {
@@ -141,8 +115,6 @@ class _AnalysisLoadingScreenState extends ConsumerState<AnalysisLoadingScreen> {
       body: _errorMessage != null
           ? _buildErrorView()
           : _LoadingView(
-              step: _step,
-              steps: _steps,
               progressText: _progressText,
               onContinueInBackground:
                   _canContinueInBackground ? () => context.go('/') : null,
@@ -209,11 +181,10 @@ class _AnalysisLoadingScreenState extends ConsumerState<AnalysisLoadingScreen> {
                 setState(() {
                   _errorMessage = null;
                   _progressText = null;
-                  _step = 0;
                   _canContinueInBackground = false;
                 });
+                AiAnalysisService.analysisStage.value = 0;
                 _runAnalysis();
-                _animateSteps();
               },
               style: FilledButton.styleFrom(minimumSize: const Size(120, 40)),
               child: const Text('重试'),
@@ -225,16 +196,13 @@ class _AnalysisLoadingScreenState extends ConsumerState<AnalysisLoadingScreen> {
   }
 }
 
+/// 加载页：阶段进度（打勾）+ 不确定进度条 + 安抚文案轮播。
 class _LoadingView extends StatefulWidget {
   const _LoadingView({
-    required this.step,
-    required this.steps,
     this.progressText,
     this.onContinueInBackground,
   });
 
-  final int step;
-  final List<String> steps;
   final String? progressText;
   final VoidCallback? onContinueInBackground;
 
@@ -244,7 +212,23 @@ class _LoadingView extends StatefulWidget {
 
 class _LoadingViewState extends State<_LoadingView>
     with SingleTickerProviderStateMixin {
+  static const List<String> _stages = <String>[
+    '正在读取图片…',
+    '正在识别题干…',
+    '正在解题分析…',
+    '正在整理知识点…',
+  ];
+
+  static const List<String> _comfort = <String>[
+    '别急，AI 正在认真读题…',
+    '手写也能认，稍等片刻…',
+    '正在核对答案，马上就好…',
+    '整理知识点中，先深呼吸一下…',
+  ];
+
   late AnimationController _controller;
+  Timer? _comfortTimer;
+  int _comfortIndex = 0;
 
   @override
   void initState() {
@@ -253,21 +237,27 @@ class _LoadingViewState extends State<_LoadingView>
       duration: const Duration(seconds: 3),
       vsync: this,
     )..repeat();
+    _comfortTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted) return;
+      setState(() => _comfortIndex = (_comfortIndex + 1) % _comfort.length);
+    });
   }
 
   @override
   void dispose() {
+    _comfortTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Stack(
       children: <Widget>[
         Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(28, 24, 28, 96),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
@@ -275,7 +265,7 @@ class _LoadingViewState extends State<_LoadingView>
                   width: 88,
                   height: 88,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
+                    color: theme.brightness == Brightness.dark
                         ? const Color(0xFF6366F1).withValues(alpha: 0.18)
                         : const Color(0xFFEEF2FF),
                     borderRadius: BorderRadius.circular(44),
@@ -289,34 +279,58 @@ class _LoadingViewState extends State<_LoadingView>
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
-                const CircularProgressIndicator(
-                  strokeWidth: 3,
-                  color: Color(0xFF6366F1),
+                const SizedBox(height: 26),
+                // 不确定进度条：持续流动，让等待「有变化」
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: const LinearProgressIndicator(
+                    minHeight: 6,
+                    color: Color(0xFF6366F1),
+                    backgroundColor: Color(0xFFE0E7FF),
+                  ),
                 ),
-                const SizedBox(height: 28),
-                Text(
-                  widget.progressText ?? widget.steps[widget.step],
-                  style:
-                      const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                const SizedBox(height: 22),
+                ValueListenableBuilder<int>(
+                  valueListenable: AiAnalysisService.analysisStage,
+                  builder: (_, stage, __) => Column(
+                    children: <Widget>[
+                      for (var i = 0; i < _stages.length; i++)
+                        _StageRow(
+                          label: _stages[i],
+                          done: i < stage,
+                          active: i == stage,
+                        ),
+                    ],
+                  ),
                 ),
+                const SizedBox(height: 18),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  child: Text(
+                    _comfort[_comfortIndex],
+                    key: ValueKey<int>(_comfortIndex),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                if (widget.progressText != null) ...<Widget>[
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.progressText!,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
+                ],
                 if (widget.onContinueInBackground != null) ...<Widget>[
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 22),
                   OutlinedButton.icon(
                     onPressed: widget.onContinueInBackground,
                     icon: const Icon(CupertinoIcons.camera, size: 18),
                     label: const Text('继续录题'),
                   ),
                 ],
-                const SizedBox(height: 8),
-                Text(
-                  widget.progressText != null
-                      ? '多题依次分析中，请稍候...'
-                      : 'AI 正在生成学习分析，请稍候...',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ),
               ],
             ),
           ),
@@ -326,15 +340,66 @@ class _LoadingViewState extends State<_LoadingView>
           left: 16,
           right: 16,
           bottom: 20,
-          child: _TipsCarousel(),
+          child: const _TipsCarousel(),
         ),
       ],
     );
   }
 }
 
+/// 单行阶段：已完成打勾、进行中高亮、未开始灰色。
+class _StageRow extends StatelessWidget {
+  const _StageRow({
+    required this.label,
+    required this.done,
+    required this.active,
+  });
+
+  final String label;
+  final bool done;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = done
+        ? const Color(0xFF16A34A)
+        : active
+            ? const Color(0xFF4F46E5)
+            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: <Widget>[
+          Icon(
+            done
+                ? CupertinoIcons.check_mark_circled_solid
+                : active
+                    ? CupertinoIcons.arrow_right_circle_fill
+                    : CupertinoIcons.circle,
+            size: 18,
+            color: color,
+          ),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.3,
+              color: color,
+              fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 底部轮播小贴士：等待时循环展示使用技巧。
 class _TipsCarousel extends StatefulWidget {
+  const _TipsCarousel();
+
   @override
   State<_TipsCarousel> createState() => _TipsCarouselState();
 }

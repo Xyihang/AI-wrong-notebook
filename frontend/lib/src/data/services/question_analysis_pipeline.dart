@@ -98,6 +98,8 @@ class QuestionAnalysisPipeline {
           subjectName: working.subject.name,
           imagePath: shouldUseImageForAnalysis ? working.imagePath : null,
         );
+    // 解题完成，进入整理/落库阶段（供加载页打勾）。
+    AiAnalysisService.analysisStage.value = 3;
 
     if (firstSuccessfulCandidate == null &&
         analysis.reconstructedQuestionText.trim().isNotEmpty) {

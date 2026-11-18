@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
 import 'package:smart_wrong_notebook/src/domain/models/ai_conversation_message.dart';
 import 'package:smart_wrong_notebook/src/domain/models/ai_task_spec.dart';
@@ -49,9 +51,12 @@ class QuestionDetailScreen extends ConsumerWidget {
     final batchGroup = batchGroups?[questionBatchRootId(current)];
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final glassEnabled = ref.watch(glassEnabledProvider);
 
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: glassEnabled,
+      appBar: glassTopBar(
+        context,
         title: const Text('错题详情'),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.chevron_left),
@@ -84,7 +89,12 @@ class QuestionDetailScreen extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          24 + (glassEnabled ? glassTopInset(context) : 0),
+          24,
+          24,
+        ),
         children: <Widget>[
           // 统一标签分类框：科目 | AI识别 | 状态
           Container(

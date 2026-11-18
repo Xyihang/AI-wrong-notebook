@@ -32,6 +32,7 @@ dependencies:
   flutter_math_fork: ^0.7.4
   webview_flutter: ^4.10.0
   markdown: ^7.3.1
+  liquid_glass_widgets: ^1.17.5
 
 dev_dependencies:
   flutter_test:

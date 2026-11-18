@@ -6,9 +6,55 @@ import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
 import 'package:smart_wrong_notebook/src/core/constants/app_config.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_appearance.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
+
+  /// 选择玻璃外观（自动/低/中/高/关闭）。
+  Future<void> _pickGlassAppearance(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final current = ref.read(glassAppearanceProvider);
+    final selected = await showModalBottomSheet<GlassAppearance>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: Text(
+                '玻璃外观',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+            ),
+            for (final item in GlassAppearance.values)
+              RadioListTile<GlassAppearance>(
+                value: item,
+                // ignore: deprecated_member_use
+                groupValue: current,
+                title: Text(item.label),
+                subtitle: item == GlassAppearance.auto
+                    ? const Text('按设备性能自动选择，判档失败按「中」')
+                    : null,
+                // ignore: deprecated_member_use
+                onChanged: (value) => Navigator.pop(ctx, value),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (selected != null) {
+      await ref.read(glassAppearanceProvider.notifier).set(selected);
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -17,11 +63,18 @@ class SettingsScreen extends ConsumerWidget {
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final glassEnabled = ref.watch(glassEnabledProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      extendBodyBehindAppBar: glassEnabled,
+      appBar: glassTopBar(context, title: const Text('设置')),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          24 + (glassEnabled ? glassTopInset(context) : 0),
+          24,
+          24,
+        ),
         children: <Widget>[
           // Account
           Text('账号',
@@ -118,6 +171,20 @@ class SettingsScreen extends ConsumerWidget {
                       .read(themeModeProvider.notifier)
                       .setMode(ThemeMode.dark)),
             ],
+          ),
+          const SizedBox(height: 12),
+          // 液态玻璃外观：自动/低/中/高/关闭（详见 docs/SPEC-LIQUID-GLASS.md）
+          _SettingsSection(
+            child: _SettingsListItem(
+              icon: CupertinoIcons.square_on_square,
+              iconColor: const Color(0xFF8B5CF6),
+              lightIconBg: const Color(0xFFF5F3FF),
+              title: '玻璃外观',
+              subtitle:
+                  '${ref.watch(glassAppearanceProvider).label} · '
+                  '设备档位：${ref.watch(glassTierProvider).label}',
+              onTap: () => _pickGlassAppearance(context, ref),
+            ),
           ),
           const SizedBox(height: 24),
           // Notifications
@@ -252,9 +319,7 @@ class SettingsScreen extends ConsumerWidget {
                   ClipboardData(text: AppConfig.currentBaseUrl),
                 );
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('后端地址已复制')),
-                  );
+                  showAppToast(context, '后端地址已复制');
                 }
               },
             ),

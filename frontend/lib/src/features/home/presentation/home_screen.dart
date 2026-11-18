@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/common/widgets/stats_chart.dart';
 import 'package:smart_wrong_notebook/src/data/services/question_analysis_coordinator.dart';
 import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
@@ -39,28 +40,15 @@ class HomeScreen extends ConsumerWidget {
       _guestReminderShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!context.mounted) return;
-        final goLogin = await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (c) => AlertDialog(
-            title: const Text('游客模式'),
-            content: const Text(
-              '你正以游客身份使用：错题与数据只保存在本机，卸载/换机不会保留。\n'
+        final goLogin = await showAppConfirm(
+          context,
+          title: '游客模式',
+          message: '你正以游客身份使用：错题与数据只保存在本机，卸载/换机不会保留。\n'
               '建议登录账号，以便云端同步、多设备使用。',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(c, false),
-                child: const Text('继续游客'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(c, true),
-                child: const Text('去登录'),
-              ),
-            ],
-          ),
+          confirmText: '去登录',
+          cancelText: '继续游客',
         );
-        if (goLogin == true && context.mounted) {
+        if (goLogin && context.mounted) {
           await ref.read(authControllerProvider.notifier).logout();
           if (context.mounted) context.go('/login');
         }
@@ -125,8 +113,8 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: () => showModalBottomSheet<void>(
-              context: context,
+            onPressed: () => showAppSheet<void>(
+              context,
               builder: (_) => const CaptureEntrySheet(),
             ),
             icon: const Icon(CupertinoIcons.camera),

@@ -47,6 +47,11 @@ import 'package:smart_wrong_notebook/src/features/achievements/presentation/achi
 import 'package:smart_wrong_notebook/src/features/paper/presentation/paper_setup_screen.dart';
 import 'package:smart_wrong_notebook/src/features/paper/presentation/paper_preview_screen.dart';
 import 'package:smart_wrong_notebook/src/data/remote/config/backend_config_resolver.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:smart_wrong_notebook/src/features/glass/device_profile.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_appearance.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_warmup.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,6 +66,24 @@ void main() async {
   final navigatorKey = GlobalKey<NavigatorState>();
   final db = AppDatabase();
   final settingsRepo = DriftSettingsRepository(db);
+
+  // 玻璃外观：读取用户偏好 + 采集设备画像判档（默认中档）。
+  var glassAppearance = GlassAppearance.auto;
+  var deviceTier = GlassTier.mid;
+  try {
+    glassAppearance = GlassAppearance.fromStorage(
+      await settingsRepo.getString(GlassAppearanceNotifier.key),
+    );
+    final profile = await DeviceProfile.collect();
+    deviceTier = profile.resolveTier();
+    debugPrint('[Glass] tier=${deviceTier.name} '
+        'cores=${profile.cores} ram=${profile.ramMb}MB '
+        'hz=${profile.refreshHz.toStringAsFixed(0)} api=${profile.sdkInt} '
+        'appearance=${glassAppearance.name}');
+  } catch (_) {}
+  // 开屏动画期间预热 shader（不阻塞启动）。
+  startGlassWarmUp();
+
   final authController = AuthController(settingsRepo);
   final questionRepo = SyncingQuestionRepository(DriftQuestionRepository(db));
   final aiConversationRepo = DriftAiConversationRepository(db);
@@ -229,28 +252,35 @@ void main() async {
   // });
 
   runApp(
-    ProviderScope(
-      overrides: [
-        settingsRepositoryProvider.overrideWithValue(settingsRepo),
-        authControllerProvider.overrideWith((ref) => authController),
-        questionRepositoryProvider.overrideWithValue(questionRepo),
-        aiConversationRepositoryProvider.overrideWithValue(aiConversationRepo),
-        analysisJobRepositoryProvider.overrideWithValue(analysisJobRepo),
-        aiAnalysisServiceProvider.overrideWithValue(aiService),
-        questionAnalysisCoordinatorProvider
-            .overrideWithValue(questionAnalysisCoordinator),
-        aiLearningTaskCoordinatorProvider
-            .overrideWithValue(aiLearningTaskCoordinator),
-        imageStorageServiceProvider.overrideWithValue(ImageStorageService()),
-      ],
-      child: Consumer(
-        builder: (context, ref, _) => MaterialApp.router(
-          title: 'AI错题本',
-          theme: buildLightTheme(),
-          darkTheme: buildDarkTheme(),
-          themeMode: ref.watch(themeModeProvider),
-          routerConfig: router,
-          debugShowCheckedModeBanner: false,
+    LiquidGlassWidgets.wrap(
+      brightnessResolver: Theme.maybeBrightnessOf,
+      child: ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(settingsRepo),
+          authControllerProvider.overrideWith((ref) => authController),
+          questionRepositoryProvider.overrideWithValue(questionRepo),
+          aiConversationRepositoryProvider.overrideWithValue(aiConversationRepo),
+          analysisJobRepositoryProvider.overrideWithValue(analysisJobRepo),
+          aiAnalysisServiceProvider.overrideWithValue(aiService),
+          questionAnalysisCoordinatorProvider
+              .overrideWithValue(questionAnalysisCoordinator),
+          aiLearningTaskCoordinatorProvider
+              .overrideWithValue(aiLearningTaskCoordinator),
+          imageStorageServiceProvider.overrideWithValue(ImageStorageService()),
+          glassDeviceTierProvider.overrideWithValue(deviceTier),
+          glassAppearanceProvider.overrideWith(
+            (ref) => GlassAppearanceNotifier(settingsRepo, glassAppearance),
+          ),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) => MaterialApp.router(
+            title: 'AI错题本',
+            theme: buildLightTheme(),
+            darkTheme: buildDarkTheme(),
+            themeMode: ref.watch(themeModeProvider),
+            routerConfig: router,
+            debugShowCheckedModeBanner: false,
+          ),
         ),
       ),
     ),
@@ -288,40 +318,74 @@ String? Function(BuildContext, GoRouterState) _authRedirect(
   };
 }
 
-class ScaffoldWithNavBar extends StatelessWidget {
+class ScaffoldWithNavBar extends ConsumerWidget {
   const ScaffoldWithNavBar({required this.navigationShell, super.key});
   final StatefulNavigationShell navigationShell;
 
+  static const List<GlassTab> _glassTabs = <GlassTab>[
+    GlassTab(
+      icon: Icon(CupertinoIcons.house),
+      activeIcon: Icon(CupertinoIcons.house_fill),
+      label: '首页',
+    ),
+    GlassTab(
+      icon: Icon(CupertinoIcons.book),
+      activeIcon: Icon(CupertinoIcons.book_fill),
+      label: '错题本',
+    ),
+    GlassTab(
+      icon: Icon(CupertinoIcons.arrow_2_circlepath),
+      activeIcon: Icon(CupertinoIcons.arrow_2_circlepath),
+      label: '复习',
+    ),
+    GlassTab(
+      icon: Icon(CupertinoIcons.gear),
+      activeIcon: Icon(CupertinoIcons.gear_solid),
+      label: '设置',
+    ),
+  ];
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final glassEnabled = ref.watch(glassEnabledProvider);
+    final quality = ref.watch(glassQualityProvider);
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (int index) => navigationShell.goBranch(index),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(CupertinoIcons.house),
-            selectedIcon: Icon(CupertinoIcons.house_fill),
-            label: '首页',
-          ),
-          NavigationDestination(
-            icon: Icon(CupertinoIcons.book),
-            selectedIcon: Icon(CupertinoIcons.book_fill),
-            label: '错题本',
-          ),
-          NavigationDestination(
-            icon: Icon(CupertinoIcons.arrow_2_circlepath),
-            selectedIcon: Icon(CupertinoIcons.arrow_2_circlepath),
-            label: '复习',
-          ),
-          NavigationDestination(
-            icon: Icon(CupertinoIcons.gear),
-            selectedIcon: Icon(CupertinoIcons.gear_solid),
-            label: '设置',
-          ),
-        ],
-      ),
+      bottomNavigationBar: glassEnabled
+          ? GlassTabBar.bottom(
+              tabs: _glassTabs,
+              selectedIndex: navigationShell.currentIndex,
+              onTabSelected: (int index) =>
+                  navigationShell.goBranch(index),
+              quality: quality,
+            )
+          : NavigationBar(
+              selectedIndex: navigationShell.currentIndex,
+              onDestinationSelected: (int index) =>
+                  navigationShell.goBranch(index),
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(CupertinoIcons.house),
+                  selectedIcon: Icon(CupertinoIcons.house_fill),
+                  label: '首页',
+                ),
+                NavigationDestination(
+                  icon: Icon(CupertinoIcons.book),
+                  selectedIcon: Icon(CupertinoIcons.book_fill),
+                  label: '错题本',
+                ),
+                NavigationDestination(
+                  icon: Icon(CupertinoIcons.arrow_2_circlepath),
+                  selectedIcon: Icon(CupertinoIcons.arrow_2_circlepath),
+                  label: '复习',
+                ),
+                NavigationDestination(
+                  icon: Icon(CupertinoIcons.gear),
+                  selectedIcon: Icon(CupertinoIcons.gear_solid),
+                  label: '设置',
+                ),
+              ],
+            ),
     );
   }
 }

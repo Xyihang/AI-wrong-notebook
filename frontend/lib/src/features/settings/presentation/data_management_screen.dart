@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/data/services/analysis_failure_log_service.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 
@@ -258,26 +259,15 @@ class DataManagementScreen extends ConsumerWidget {
       );
       return;
     }
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('确认清空'),
-        content: Text(
-          '确定要删除 $questionCount 道错题和 $taskCount 条扫题记录吗？此操作不可恢复。',
-        ),
-        actions: <Widget>[
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _clearAllData(ref, context, taskCount: taskCount);
-            },
-            child: const Text('清空', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final ok = await showAppConfirm(
+      context,
+      title: '确认清空',
+      message: '确定要删除 $questionCount 道错题和 $taskCount 条扫题记录吗？此操作不可恢复。',
+      confirmText: '清空',
+      destructive: true,
     );
+    if (!ok || !context.mounted) return;
+    await _clearAllData(ref, context, taskCount: taskCount);
   }
 
   Future<void> _clearAllData(

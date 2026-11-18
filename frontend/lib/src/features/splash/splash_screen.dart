@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_warmup.dart';
 
 /// 启动页：纯代码 Logo + 版本号 + 版权信息。
 ///
@@ -34,6 +35,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (_navigated || !mounted) return;
     _navigated = true;
     _timer?.cancel();
+    // 玻璃 shader 在开屏期间并行预热；最多等 1.2s，超时则先以最小档渲染。
+    try {
+      await glassWarmUpFuture?.timeout(const Duration(milliseconds: 1200));
+    } catch (_) {}
     // 加载持久化会话（含自动登录）。加载完成后路由守卫依据 auth 状态决定去向。
     await ref.read(authControllerProvider.notifier).load();
     if (!mounted) return;

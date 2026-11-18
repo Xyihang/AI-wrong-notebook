@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 import 'package:smart_wrong_notebook/src/domain/services/forgetting_curve.dart';
@@ -16,9 +18,12 @@ class ReviewScreen extends ConsumerWidget {
     final questionsAsync = ref.watch(questionListProvider);
     final batchGroups = ref.watch(questionBatchGroupsProvider).valueOrNull;
     final colorScheme = Theme.of(context).colorScheme;
+    final glassEnabled = ref.watch(glassEnabledProvider);
 
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: glassEnabled,
+      appBar: glassTopBar(
+        context,
         title: const Text('复习'),
         actions: <Widget>[
           TextButton.icon(
@@ -48,7 +53,7 @@ class ReviewScreen extends ConsumerWidget {
               // 底部仅保留安全区（「复习记录」已移到右上角，无需额外空间）
               padding: EdgeInsets.fromLTRB(
                 24,
-                24,
+                24 + (glassEnabled ? glassTopInset(context) : 0),
                 24,
                 24 + MediaQuery.of(context).padding.bottom,
               ),

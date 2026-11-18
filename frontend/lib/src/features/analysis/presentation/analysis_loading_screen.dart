@@ -7,6 +7,7 @@ import 'package:smart_wrong_notebook/src/app/providers.dart';
 import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
 import 'package:smart_wrong_notebook/src/data/services/question_analysis_coordinator.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 
 class AnalysisLoadingScreen extends ConsumerStatefulWidget {
   const AnalysisLoadingScreen({super.key});
@@ -197,7 +198,7 @@ class _AnalysisLoadingScreenState extends ConsumerState<AnalysisLoadingScreen> {
 }
 
 /// 加载页：阶段进度（打勾）+ 不确定进度条 + 安抚文案轮播。
-class _LoadingView extends StatefulWidget {
+class _LoadingView extends ConsumerStatefulWidget {
   const _LoadingView({
     this.progressText,
     this.onContinueInBackground,
@@ -207,10 +208,10 @@ class _LoadingView extends StatefulWidget {
   final VoidCallback? onContinueInBackground;
 
   @override
-  State<_LoadingView> createState() => _LoadingViewState();
+  ConsumerState<_LoadingView> createState() => _LoadingViewState();
 }
 
-class _LoadingViewState extends State<_LoadingView>
+class _LoadingViewState extends ConsumerState<_LoadingView>
     with SingleTickerProviderStateMixin {
   static const List<String> _stages = <String>[
     '正在读取图片…',
@@ -280,15 +281,8 @@ class _LoadingViewState extends State<_LoadingView>
                   ),
                 ),
                 const SizedBox(height: 26),
-                // 不确定进度条：持续流动，让等待「有变化」
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: const LinearProgressIndicator(
-                    minHeight: 6,
-                    color: Color(0xFF6366F1),
-                    backgroundColor: Color(0xFFE0E7FF),
-                  ),
-                ),
+                // 不确定进度条：开启玻璃时为玻璃进度条，否则 Material。
+                appProgressBar(context, ref, height: 6),
                 const SizedBox(height: 22),
                 ValueListenableBuilder<int>(
                   valueListenable: AiAnalysisService.analysisStage,

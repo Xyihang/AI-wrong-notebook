@@ -8,6 +8,10 @@ import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 import 'package:smart_wrong_notebook/src/domain/models/subject.dart';
 import 'package:smart_wrong_notebook/src/features/capture/presentation/capture_entry_sheet.dart';
 import 'package:smart_wrong_notebook/src/shared/widgets/math_content_view.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 
 class NotebookScreen extends ConsumerStatefulWidget {
   const NotebookScreen({super.key});
@@ -25,26 +29,18 @@ class _NotebookScreenState extends ConsumerState<NotebookScreen> {
     super.dispose();
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref, dynamic question) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('删除后无法恢复，确定要删除这道错题吗？'),
-        actions: <Widget>[
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          TextButton(
-            onPressed: () async {
-              await ref.read(questionRepositoryProvider).delete(question.id);
-              invalidateQuestionList(ref);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(
+      BuildContext context, WidgetRef ref, dynamic question) async {
+    final ok = await showAppConfirm(
+      context,
+      title: '确认删除',
+      message: '删除后无法恢复，确定要删除这道错题吗？',
+      confirmText: '删除',
+      destructive: true,
     );
+    if (!ok) return;
+    await ref.read(questionRepositoryProvider).delete(question.id);
+    invalidateQuestionList(ref);
   }
 
   @override
@@ -57,14 +53,18 @@ class _NotebookScreenState extends ConsumerState<NotebookScreen> {
     final selectedKnowledgePoint =
         ref.watch(selectedKnowledgePointFilterProvider);
 
+    final glassEnabled = ref.watch(glassEnabledProvider);
+
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: glassEnabled,
+      appBar: glassTopBar(
+        context,
         title: const Text('错题本'),
-        actions: [
+        actions: <Widget>[
           IconButton(
             icon: const Icon(CupertinoIcons.camera),
-            onPressed: () => showModalBottomSheet<void>(
-              context: context,
+            onPressed: () => showAppSheet<void>(
+              context,
               builder: (_) => const CaptureEntrySheet(),
             ),
             tooltip: '添加错题',
@@ -73,10 +73,23 @@ class _NotebookScreenState extends ConsumerState<NotebookScreen> {
       ),
       body: Column(
         children: <Widget>[
-          // Search bar
+          // 玻璃顶栏穿透时，给内容让出状态栏 + 工具栏高度
+          if (glassEnabled) SizedBox(height: glassTopInset(context)),
+          // Search bar（玻璃开启时用 GlassSearchBar）
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-            child: TextField(
+            child: glassEnabled
+                ? GlassSearchBar(
+                    controller: _searchController,
+                    placeholder: '搜索错题',
+                    height: 46,
+                    quality: ref.watch(glassQualityProvider),
+                    onChanged: (v) {
+                      ref.read(searchQueryProvider.notifier).state = v;
+                      setState(() {});
+                    },
+                  )
+                : TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: '搜索错题',
@@ -267,7 +280,7 @@ String _masteryFilterLabel(MasteryLevel level) {
   };
 }
 
-class _Chip extends StatelessWidget {
+class _Chip extends ConsumerWidget {
   const _Chip(
       {required this.label, required this.selected, required this.onTap});
 
@@ -276,8 +289,23 @@ class _Chip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    // 玻璃开启：用 GlassChip（选中态用主题主色）
+    if (ref.watch(glassEnabledProvider)) {
+      return GlassChip(
+        label: label,
+        selected: selected,
+        onTap: onTap,
+        selectedColor: colorScheme.primary,
+        labelStyle: TextStyle(
+          fontSize: 13,
+          color:
+              selected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+        ),
+        quality: ref.watch(glassQualityProvider),
+      );
+    }
 
     return GestureDetector(
       onTap: onTap,

@@ -286,3 +286,25 @@ Widget tabBarFor(...);
   - 页面 `Scaffold(extendBodyBehindAppBar: true)` + body 顶部内边距 `glassTopInset(context)`；
   - 内容滚动时穿过顶栏，产生真实模糊/折射。
 - 已在「设置」「错题本」验证通过；复习/首页待接入。
+
+
+---
+
+## 11. 实施状态快照（Round 9）
+
+已完成并真机验证：
+- P0：设备分档（高/中/低）、设置项「玻璃外观」、shader 开屏预热、关闭即回退；
+- P1：底部浮动玻璃栏（四 Tab）；玻璃顶栏覆盖 设置 / 错题本 / 复习 / 错题详情；
+- P2：玻璃弹窗（游客提醒、错题删除、清空数据）、玻璃底部弹层（拍照入口）、
+  玻璃搜索框与筛选 chips（错题本）、玻璃进度条（解析加载页）、玻璃 Toast。
+
+未完成：
+- B3 左滑操作、B4 玻璃按钮、B5 长按菜单；
+- P3（C 组高档内容层：solid 卡片、转场、ProgressiveBlur 等）；
+- P4 数值化性能验收（Impeller 不走 HWUI，`dumpsys gfxinfo` 无效，
+  需 Flutter DevTools/`run --profile` 采集）；
+- 「关闭玻璃」逐页截图回归（本轮设备被占用，未完成）。
+
+已知限制：
+- 浅色主题下玻璃对比度较低（磨砂白效果），深色主题更明显；
+- `GlassAppBar` 不可用，顶栏统一走自建 `GlassTopBar`。

@@ -45,11 +45,25 @@ class _ImageCropScreenState extends ConsumerState<ImageCropScreen> {
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: '框选题目',
+            // 与 App 品牌色统一：靛蓝工具栏 + 深色裁剪区
             toolbarColor: const Color(0xFF6366F1),
             toolbarWidgetColor: Colors.white,
-            // 自由拖动/缩放：不锁定固定比例（lockAspectRatio=false 即可自由调整）
+            statusBarColor: const Color(0xFF4F46E5),
+            backgroundColor: const Color(0xFF0F172A),
+            activeControlsWidgetColor: const Color(0xFF8B5CF6),
+            cropFrameColor: Colors.white,
+            cropGridColor: const Color(0x66FFFFFF),
+            dimmedLayerColor: const Color(0xB3000000),
+            // 去掉 uCrop 的 Logo/计数，减少“工具感”
+            showCropGrid: true,
+            // 自由缩放；比例预设精简为 原始/1:1/4:3
             initAspectRatio: CropAspectRatioPreset.original,
             lockAspectRatio: false,
+            aspectRatioPresets: <CropAspectRatioPreset>[
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio4x3,
+            ],
             hideBottomControls: false,
           ),
           IOSUiSettings(

@@ -55,10 +55,15 @@ Future<T?> showAppSheet<T>(
           child: child,
         );
       }
-      return GlassContainer(
-        quality: quality,
-        padding: EdgeInsets.only(top: 6, bottom: bottomInset),
-        child: SafeArea(top: false, child: child),
+      // bottomInset 放在玻璃面板**外面**：让整块玻璃面板止于 Dock 上方；
+      // 左右留 16，做成浮空卡片（与确认弹窗观感统一，不再贴满屏幕两侧）。
+      return Padding(
+        padding: EdgeInsets.only(left: 16, right: 16, bottom: bottomInset),
+        child: GlassContainer(
+          quality: quality,
+          padding: const EdgeInsets.only(top: 6),
+          child: SafeArea(top: false, bottom: bottomInset <= 0, child: child),
+        ),
       );
     },
   );

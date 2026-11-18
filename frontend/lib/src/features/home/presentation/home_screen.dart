@@ -115,7 +115,7 @@ class HomeScreen extends ConsumerWidget {
           FilledButton.icon(
             onPressed: () => showAppSheet<void>(
               context,
-              bottomInset: 96,
+              bottomInset: 84,
               builder: (_) => const CaptureEntrySheet(),
             ),
             icon: const Icon(CupertinoIcons.camera),

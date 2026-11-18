@@ -233,7 +233,8 @@ class _NotebookScreenState extends ConsumerState<NotebookScreen> {
                           onTap: () {
                             ref.read(currentQuestionProvider.notifier).state =
                                 q;
-                            context.go('/notebook/question/${q.id}');
+                            // 用 push 保留返回栈：系统返回键回到错题本而不是首页
+                            context.push('/notebook/question/${q.id}');
                           },
                           onDelete: () => _confirmDelete(context, ref, q),
                           onKnowledgePointTap: (kp) {

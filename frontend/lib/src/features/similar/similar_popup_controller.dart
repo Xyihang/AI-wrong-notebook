@@ -126,7 +126,8 @@ class SimilarPopupController extends Notifier<SimilarPopupState> {
       ref.read(currentQuestionProvider.notifier).state = record;
     }
     if (!context.mounted) return;
-    context.go('/notebook/question/$id');
+    // push 保留返回栈：返回键回到上一页
+    context.push('/notebook/question/$id');
   }
 
   /// 跳转到错题本并只保留该知识点的过滤（「查看该知识点全部错题」）。

@@ -261,7 +261,8 @@ class _ReviewQuestionList extends StatelessWidget {
                 nextReview: nextReviewLabel(q),
                 onOpen: () {
                   ref.read(currentQuestionProvider.notifier).state = q;
-                  context.go('/notebook/question/${q.id}');
+                  // push 保留返回栈：返回键回到复习页
+                  context.push('/notebook/question/${q.id}');
                 },
               ))
           .toList(),

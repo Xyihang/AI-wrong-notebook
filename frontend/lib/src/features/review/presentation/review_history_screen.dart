@@ -100,7 +100,8 @@ class ReviewHistoryScreen extends ConsumerWidget {
             ? () {
                 ref.read(currentQuestionProvider.notifier).state =
                     entry.question;
-                context.go('/notebook/question/${entry.question!.id}');
+                // push 保留返回栈：返回键回到复习记录页
+                context.push('/notebook/question/${entry.question!.id}');
               }
             : null,
       ),

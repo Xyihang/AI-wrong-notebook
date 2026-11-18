@@ -17,6 +17,9 @@ import 'package:smart_wrong_notebook/src/shared/widgets/math_content_view.dart';
 /// 本会话已弹过「恭喜」的徽章 id（避免同一次解锁重复弹出）。
 final Set<String> _celebratedUnlockIds = <String>{};
 
+/// 本次游客会话是否已弹过「建议登录」提醒（避免重复弹）。
+bool _guestReminderShown = false;
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -28,6 +31,41 @@ class HomeScreen extends ConsumerWidget {
     final gamificationAsync = ref.watch(gamificationSnapshotProvider);
     final auth = ref.watch(authControllerProvider);
     final isGuest = auth is AuthGuest;
+
+    // 游客模式「建议登录」提醒：进入首页后弹一次，必须用户确认。
+    if (!isGuest) {
+      _guestReminderShown = false;
+    } else if (!_guestReminderShown) {
+      _guestReminderShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!context.mounted) return;
+        final goLogin = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (c) => AlertDialog(
+            title: const Text('游客模式'),
+            content: const Text(
+              '你正以游客身份使用：错题与数据只保存在本机，卸载/换机不会保留。\n'
+              '建议登录账号，以便云端同步、多设备使用。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: const Text('继续游客'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(c, true),
+                child: const Text('去登录'),
+              ),
+            ],
+          ),
+        );
+        if (goLogin == true && context.mounted) {
+          await ref.read(authControllerProvider.notifier).logout();
+          if (context.mounted) context.go('/login');
+        }
+      });
+    }
 
     // 新徽章解锁 → 弹「恭喜」（每枚只弹一次）。
     ref.listen(gamificationSnapshotProvider, (prev, next) {
@@ -106,8 +144,9 @@ class HomeScreen extends ConsumerWidget {
           ),
           if (!isGuest) const VisionQuotaCard(),
           const SizedBox(height: 10),
-          // 数据存储提示：本地保存，卸载/清数据会丢失，引导去设置导出备份
-          _LocalDataNotice(onTap: () => context.go('/settings/data')),
+          // 数据存储提示：仅在游客/未登录时显示（登录后云端有备份，不必提示本机丢失）
+          if (auth is! AuthAuthenticated)
+            _LocalDataNotice(onTap: () => context.go('/settings/data')),
           const SizedBox(height: 20),
           analysisTasksAsync.when(
             data: (tasks) {
@@ -437,7 +476,8 @@ class _RecentList extends StatelessWidget {
           question: q,
           onTap: () {
             ref.read(currentQuestionProvider.notifier).state = q;
-            context.go('/notebook/question/${q.id}');
+            // push 保留返回栈：返回键回到首页而不是退出/跳错题本
+            context.push('/notebook/question/${q.id}');
           },
         );
       }),

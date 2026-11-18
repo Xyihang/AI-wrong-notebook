@@ -55,7 +55,9 @@ class QuestionDetailScreen extends ConsumerWidget {
         title: const Text('错题详情'),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.chevron_left),
-          onPressed: () => context.go('/notebook'),
+          // 有返回栈就 pop 回上一页（错题本），没有则回错题本
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/notebook'),
         ),
         actions: <Widget>[
           IconButton(
@@ -214,7 +216,8 @@ class QuestionDetailScreen extends ConsumerWidget {
               group: batchGroup,
               onSelect: (question) {
                 ref.read(currentQuestionProvider.notifier).state = question;
-                context.go('/notebook/question/${question.id}');
+                // push 保留栈，返回时回到上一题而不是直接跳回列表
+                context.push('/notebook/question/${question.id}');
               },
             ),
           ],

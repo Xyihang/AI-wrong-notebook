@@ -65,6 +65,7 @@ class _NotebookScreenState extends ConsumerState<NotebookScreen> {
             icon: const Icon(CupertinoIcons.camera),
             onPressed: () => showAppSheet<void>(
               context,
+              bottomInset: 96,
               builder: (_) => const CaptureEntrySheet(),
             ),
             tooltip: '添加错题',

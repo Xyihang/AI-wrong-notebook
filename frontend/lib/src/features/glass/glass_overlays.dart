@@ -28,10 +28,14 @@ Widget appProgressBar(
 
 /// 统一底部弹层：玻璃开启时用 [GlassContainer] 作为弹层表面，
 /// 否则回退普通 [showModalBottomSheet]。
+///
+/// [bottomInset] 用于避开底部悬浮 Dock（玻璃底栏）：弹层内容底部留白，
+/// 避免与 Dock 视觉重叠。
 Future<T?> showAppSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
   bool isScrollControlled = true,
+  double bottomInset = 0,
 }) {
   final container = ProviderScope.containerOf(context, listen: false);
   final enabled = container.read(glassEnabledProvider);
@@ -44,10 +48,16 @@ Future<T?> showAppSheet<T>(
     showDragHandle: !enabled,
     builder: (ctx) {
       final child = builder(ctx);
-      if (!enabled) return child;
+      if (!enabled) {
+        if (bottomInset <= 0) return child;
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: child,
+        );
+      }
       return GlassContainer(
         quality: quality,
-        padding: const EdgeInsets.only(top: 6),
+        padding: EdgeInsets.only(top: 6, bottom: bottomInset),
         child: SafeArea(top: false, child: child),
       );
     },

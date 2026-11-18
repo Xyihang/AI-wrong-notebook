@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/domain/models/content_status.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 
@@ -114,15 +116,28 @@ class _ImageCropScreenState extends ConsumerState<ImageCropScreen> {
         _exitAndClear();
       },
       child: Scaffold(
-        appBar: AppBar(
+        extendBodyBehindAppBar: ref.watch(glassEnabledProvider),
+        appBar: glassTopBar(
+          context,
           title: const Text('框选题目'),
           leading: IconButton(
             icon: const Icon(CupertinoIcons.chevron_left),
             onPressed: _exitAndClear,
           ),
         ),
-        body: SafeArea(
-          child: Center(
+        body: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: <Color>[
+                Theme.of(context).colorScheme.surfaceContainerLow,
+                Theme.of(context).colorScheme.surface,
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Center(
             child: _cropping
                 ? const Column(
                     mainAxisSize: MainAxisSize.min,
@@ -146,6 +161,7 @@ class _ImageCropScreenState extends ConsumerState<ImageCropScreen> {
                       ],
                     ),
                   ),
+            ),
           ),
         ),
       ),

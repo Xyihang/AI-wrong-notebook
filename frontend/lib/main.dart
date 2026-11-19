@@ -273,14 +273,31 @@ void main() async {
           ),
         ],
         child: Consumer(
-          builder: (context, ref, _) => MaterialApp.router(
-            title: 'AI错题本',
-            theme: buildLightTheme(),
-            darkTheme: buildDarkTheme(),
-            themeMode: ref.watch(themeModeProvider),
-            routerConfig: router,
-            debugShowCheckedModeBanner: false,
-          ),
+          builder: (context, ref, _) {
+            // P3/C3：高档设备 + 玻璃开启时，页面切换使用玻璃转场
+            final useGlassTransition = ref.watch(glassEnabledProvider) &&
+                ref.watch(glassDeviceTierProvider) == GlassTier.high;
+            const glassTransitions = PageTransitionsTheme(
+              builders: <TargetPlatform, PageTransitionsBuilder>{
+                TargetPlatform.android: GlassPageTransitionsBuilder(),
+                TargetPlatform.iOS: GlassPageTransitionsBuilder(),
+              },
+            );
+            final light = buildLightTheme();
+            final dark = buildDarkTheme();
+            return MaterialApp.router(
+              title: 'AI错题本',
+              theme: useGlassTransition
+                  ? light.copyWith(pageTransitionsTheme: glassTransitions)
+                  : light,
+              darkTheme: useGlassTransition
+                  ? dark.copyWith(pageTransitionsTheme: glassTransitions)
+                  : dark,
+              themeMode: ref.watch(themeModeProvider),
+              routerConfig: router,
+              debugShowCheckedModeBanner: false,
+            );
+          },
         ),
       ),
     ),

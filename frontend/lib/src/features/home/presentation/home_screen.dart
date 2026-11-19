@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
+import 'package:smart_wrong_notebook/src/common/widgets/app_fab.dart';
 import 'package:smart_wrong_notebook/src/app/design/tokens.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
 import 'package:smart_wrong_notebook/src/common/widgets/app_card.dart';
@@ -91,7 +92,9 @@ class HomeScreen extends ConsumerWidget {
       // 玻璃开启时内容从顶栏下方穿过，产生和其他页面一致的穿透模糊
       extendBodyBehindAppBar: glassEnabled,
       appBar: glassTopBar(context, title: const Text('开始拍错题')),
-      body: SafeArea(
+      body: Stack(
+        children: <Widget>[
+          SafeArea(
         top: !glassEnabled,
         // 关闭 Material3 拉伸过滚动：拉伸会让玻璃折射错位、出现红黄色散条纹
         child: ScrollConfiguration(
@@ -204,6 +207,29 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+          // T10：右下角悬浮拍照按钮
+          Positioned(
+            right: AppTokens.s4,
+            bottom: 88,
+            child: AppFab(
+              icon: CupertinoIcons.camera,
+              tooltip: '拍照录题',
+              onTap: () => showAppSheet<void>(
+                context,
+                bottomInset: 20,
+                builder: (_) => const CaptureEntrySheet(),
+              ),
+            ),
+          ),
+          // T10：底部渐隐
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: AppBottomFade(),
+          ),
+        ],
       ),
     );
   }

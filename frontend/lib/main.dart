@@ -294,24 +294,19 @@ void main() async {
         child: Consumer(
           builder: (context, ref, _) {
             // P3/C3：高档设备 + 玻璃开启时，页面切换使用玻璃转场
-            final useGlassTransition = ref.watch(glassEnabledProvider) &&
-                ref.watch(glassDeviceTierProvider) == GlassTier.high;
-            const glassTransitions = PageTransitionsTheme(
+            // 用户要求：全部关闭页面转场动画
+            const noTransitions = PageTransitionsTheme(
               builders: <TargetPlatform, PageTransitionsBuilder>{
-                TargetPlatform.android: GlassPageTransitionsBuilder(),
-                TargetPlatform.iOS: GlassPageTransitionsBuilder(),
+                TargetPlatform.android: NoPageTransitionsBuilder(),
+                TargetPlatform.iOS: NoPageTransitionsBuilder(),
               },
             );
             final light = buildLightTheme();
             final dark = buildDarkTheme();
             return MaterialApp.router(
               title: 'AI错题本',
-              theme: useGlassTransition
-                  ? light.copyWith(pageTransitionsTheme: glassTransitions)
-                  : light,
-              darkTheme: useGlassTransition
-                  ? dark.copyWith(pageTransitionsTheme: glassTransitions)
-                  : dark,
+              theme: light.copyWith(pageTransitionsTheme: noTransitions),
+              darkTheme: dark.copyWith(pageTransitionsTheme: noTransitions),
               themeMode: ref.watch(themeModeProvider),
               routerConfig: router,
               debugShowCheckedModeBanner: false,
@@ -462,4 +457,23 @@ class ScaffoldWithNavBar extends ConsumerWidget {
             ),
     );
   }
+}
+
+
+/// 完全关闭页面转场动画（用户要求）：新页面直接出现，不做滑动/淡入。
+class NoPageTransitionsBuilder extends PageTransitionsBuilder {
+  const NoPageTransitionsBuilder();
+
+  @override
+  Duration get transitionDuration => Duration.zero;
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) =>
+      child;
 }

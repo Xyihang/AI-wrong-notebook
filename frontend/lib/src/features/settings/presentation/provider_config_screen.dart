@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/data/repositories/settings_repository.dart';
 import 'package:smart_wrong_notebook/src/domain/models/ai_provider_config.dart';
 import 'package:smart_wrong_notebook/src/features/settings/presentation/ai_provider_preset.dart';
@@ -357,9 +359,12 @@ class _ProviderConfigScreenState extends ConsumerState<ProviderConfigScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final selectedModel = _modelController.text.trim();
+    final glassEnabled = ref.watch(glassEnabledProvider);
 
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: glassEnabled,
+      appBar: glassTopBar(
+        context,
         title: const Text('AI 服务商配置'),
         leading: IconButton(
           tooltip: '返回',
@@ -370,7 +375,12 @@ class _ProviderConfigScreenState extends ConsumerState<ProviderConfigScreen> {
       body: SafeArea(
         child: ListView(
           key: const Key('provider-config-scroll'),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            12 + (glassEnabled ? glassTopInset(context) : 0),
+            16,
+            28,
+          ),
           children: <Widget>[
             _ConfigurationSurface(
               child: InkWell(

@@ -813,15 +813,35 @@ class _CaptureButton extends ConsumerWidget {
             minimumSize: const Size(double.infinity, 52)),
       );
     }
-    // 玻璃按钮：整行宽度，高度 52
-    final width = MediaQuery.sizeOf(context).width - 48;
-    return GlassButton(
-      icon: const Icon(CupertinoIcons.camera, size: 20),
-      label: '拍照录题',
-      width: width,
-      height: 52,
+    // 玻璃胶囊按钮：GlassButton 本身不渲染文字（label 仅语义），
+    // 这里用 GlassContainer + 图标/文字自绘，效果与 Material 主按钮一致。
+    final scheme = Theme.of(context).colorScheme;
+    return GestureDetector(
       onTap: onTap,
-      quality: ref.watch(glassQualityProvider),
+      child: GlassContainer(
+        quality: ref.watch(glassQualityProvider),
+        shape: const LiquidRoundedSuperellipse(borderRadius: 26),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: SizedBox(
+          height: 52,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(CupertinoIcons.camera,
+                  size: 20, color: scheme.onSurface),
+              const SizedBox(width: 8),
+              Text(
+                '拍照录题',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

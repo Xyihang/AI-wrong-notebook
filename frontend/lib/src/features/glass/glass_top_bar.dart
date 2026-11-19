@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:smart_wrong_notebook/src/config/scroll_tint.dart';
 
 /// 顶栏高度 + 状态栏高度（内容穿透时需要给 body 的顶部内边距）。
 double glassTopInset(BuildContext context) =>
@@ -62,60 +63,87 @@ class GlassTopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    // 不做常驻纯色底：让 GlassContainer 真实折射后方内容，
-    // 折射强度由档位决定（低=minimal / 中=standard / 高=premium）。
-    return GlassContainer(
-      quality: ref.watch(glassQualityProvider),
-      shape: const LiquidRoundedSuperellipse(borderRadius: 0),
-      padding: EdgeInsets.only(top: topInset),
-      child: SizedBox(
-        height: kToolbarHeight,
-        // 用 Stack 让标题相对整条顶栏水平居中（不受左右按钮宽度影响），
-        // 左右按钮浮在上层，标题两侧留出安全边距避免被压。
-        child: Stack(
-          children: <Widget>[
-            if (centerTitle)
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 64),
-                  child: Center(
-                    child: DefaultTextStyle(
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
-                      child: title,
-                    ),
-                  ),
-                ),
-              ),
-            if (!centerTitle)
-              Positioned.fill(
-                child: Padding(
-                  padding: EdgeInsets.only(left: leading == null ? 16 : 56),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: DefaultTextStyle(
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
-                      child: title,
-                    ),
-                  ),
-                ),
-              ),
-            if (leading != null)
-              Align(alignment: Alignment.centerLeft, child: leading!),
-            if (actions != null && actions!.isNotEmpty)
-              Align(
-                alignment: Alignment.centerRight,
-                child: Row(mainAxisSize: MainAxisSize.min, children: actions!),
-              ),
-          ],
+    // 滚动进度 0..1：顶部时为 0（完全透明），下滑 72px 后变成完整玻璃面
+    return ValueListenableBuilder<double>(
+      valueListenable: globalScrollOffset,
+      builder: (context, offset, _) {
+        final progress = (offset / 72).clamp(0.0, 1.0);
+        return _buildBar(context, ref, scheme, progress);
+      },
+    );
+  }
+
+  Widget _buildBar(
+      BuildContext context, WidgetRef ref, ColorScheme scheme, double progress) {
+    if (progress <= 0.01) {
+      // 未滚动：完全透明，只占位（内容仍从下方穿过）
+      return SizedBox(
+        height: kToolbarHeight + topInset,
+        child: Padding(
+          padding: EdgeInsets.only(top: topInset),
+          child: _buildContent(scheme),
         ),
+      );
+    }
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.35 * progress),
+      ),
+      child: GlassContainer(
+        quality: ref.watch(glassQualityProvider),
+        shape: const LiquidRoundedSuperellipse(borderRadius: 0),
+        padding: EdgeInsets.only(top: topInset),
+        child: _buildContent(scheme),
+      ),
+    );
+  }
+
+  Widget _buildContent(ColorScheme scheme) {
+    return SizedBox(
+      height: kToolbarHeight,
+      child: Stack(
+        children: <Widget>[
+          if (centerTitle)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 64),
+                child: Center(
+                  child: DefaultTextStyle(
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
+                    ),
+                    child: title,
+                  ),
+                ),
+              ),
+            ),
+          if (!centerTitle)
+            Positioned.fill(
+              child: Padding(
+                padding: EdgeInsets.only(left: leading == null ? 16 : 56),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: DefaultTextStyle(
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
+                    ),
+                    child: title,
+                  ),
+                ),
+              ),
+            ),
+          if (leading != null)
+            Align(alignment: Alignment.centerLeft, child: leading!),
+          if (actions != null && actions!.isNotEmpty)
+            Align(
+              alignment: Alignment.centerRight,
+              child: Row(mainAxisSize: MainAxisSize.min, children: actions!),
+            ),
+        ],
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/config/scroll_tint.dart';
 import 'package:smart_wrong_notebook/src/common/widgets/app_fab.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_edge_fade.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
@@ -414,7 +415,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
     return Scaffold(
       body: Stack(
         children: <Widget>[
-          navigationShell,
+          ScrollTintListener(child: navigationShell),
           Positioned(
             left: 0,
             right: 0,

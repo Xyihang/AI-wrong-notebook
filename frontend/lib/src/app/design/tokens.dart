@@ -288,3 +288,55 @@ extension AppTokensX on BuildContext {
           ? AppTokens.dark
           : AppTokens.light);
 }
+
+
+/// 补齐的设计缺口（不属于主题切换字段，但设计稿需要）。
+///
+/// 用法：`AppPalette.accentViolet(context.tokens.isDark)` 等。
+class AppPalette {
+  const AppPalette._();
+
+  /// 强调紫（候选卡、难度=提高）。
+  static Color accentViolet(bool dark) =>
+      dark ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED);
+
+  /// 橙红档（答错 / 待复习，介于 warning 与 error 之间）。
+  static Color orange(bool dark) =>
+      dark ? const Color(0xFFFB923C) : const Color(0xFFEA580C);
+
+  /// 软底上的深色前景（保证彩色底上的对比度）。
+  static Color onSoft(Color softForeground, bool dark) => dark
+      ? softForeground
+      : Color.lerp(softForeground, const Color(0xFF000000), 0.35)!;
+
+  /// 中性最浅底（「今日新增」类卡片）。
+  static Color bgSubtle(bool dark) =>
+      dark ? const Color(0xFF0F172A) : const Color(0xFFF9FAFB);
+
+  /// 反向表面（tooltip / 深色提示条）。
+  static Color inverseSurface(bool dark) =>
+      dark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B);
+
+  /// 反向表面上的文字。
+  static Color onInverseSurface(bool dark) =>
+      dark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF);
+
+  /// 图表数据系列色（3 条）。
+  static List<Color> chartSeries(bool dark) => dark
+      ? const <Color>[
+          Color(0xFF4ADE80),
+          Color(0xFFFBBF24),
+          Color(0xFF64748B),
+        ]
+      : const <Color>[
+          Color(0xFF16A34A),
+          Color(0xFFD97706),
+          Color(0xFF9CA3AF),
+        ];
+
+  /// 极小字（图片角标等，设计稿 10px）。
+  static const double textXxs = 10;
+
+  /// 全圆角。
+  static const double radiusFull = 999;
+}

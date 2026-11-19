@@ -313,6 +313,8 @@ void main() async {
               routerConfig: router,
               debugShowCheckedModeBanner: false,
               builder: (context, child) {
+                // 背景始终铺（顶栏折射需要内容垫底）；
+                // 档位只决定玻璃质量：低=minimal / 中=standard / 高=premium。
                 final selection = ref.watch(pageBackgroundProvider);
                 final theme = Theme.of(context);
                 final bg = selection

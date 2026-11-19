@@ -82,12 +82,21 @@ class HomeScreen extends ConsumerWidget {
       }
     });
 
+    final glassEnabled = ref.watch(glassEnabledProvider);
     return Scaffold(
       backgroundColor: Colors.transparent,
+      // 玻璃开启时内容从顶栏下方穿过，产生和其他页面一致的穿透模糊
+      extendBodyBehindAppBar: glassEnabled,
       appBar: glassTopBar(context, title: const Text('开始拍错题')),
       body: SafeArea(
+      top: !glassEnabled,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          20 + (glassEnabled ? glassTopInset(context) : 0),
+          24,
+          24,
+        ),
         children: <Widget>[
           if (isGuest) ...<Widget>[
             _GuestBanner(

@@ -62,6 +62,8 @@ class GlassTopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    // 不做常驻纯色底：让 GlassContainer 真实折射后方内容，
+    // 折射强度由档位决定（低=minimal / 中=standard / 高=premium）。
     return GlassContainer(
       quality: ref.watch(glassQualityProvider),
       shape: const LiquidRoundedSuperellipse(borderRadius: 0),

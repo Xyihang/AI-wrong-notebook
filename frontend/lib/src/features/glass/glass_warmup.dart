@@ -16,6 +16,9 @@ void startGlassWarmUp() {
 Future<void> _warmUp() async {
   try {
     await LiquidGlassWidgets.initialize();
+    // P3/C4：边缘渐隐（ProgressiveBlur）的 shader 一并预编译，
+    // 避免首次绘制时出现一帧无模糊。
+    await ProgressiveBlur.preload();
   } catch (_) {
     // 预热失败不影响使用，组件会自行降级。
   }

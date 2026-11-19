@@ -8,6 +8,7 @@ import 'package:smart_wrong_notebook/src/domain/models/content_status.dart';
 import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 import 'package:smart_wrong_notebook/src/domain/models/subject.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
 import 'package:smart_wrong_notebook/src/features/home/presentation/home_screen.dart';
 
 QuestionRecord _question({
@@ -37,6 +38,8 @@ void main() {
     final repository = InMemoryQuestionRepository();
     final container = ProviderContainer(overrides: <Override>[
       questionRepositoryProvider.overrideWithValue(repository),
+      // 该测试只验证导航逻辑：关闭玻璃，避免玻璃动画导致 pumpAndSettle 超时
+      glassEnabledProvider.overrideWithValue(false),
     ]);
     addTearDown(container.dispose);
     final router = GoRouter(
@@ -60,40 +63,46 @@ void main() {
       container: container,
       child: MaterialApp.router(routerConfig: router),
     ));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
     Future<void> returnHome() async {
       router.go('/');
-      await tester.pumpAndSettle();
+      await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     }
 
-    await tester.ensureVisible(find.text('题库总量'));
-    await tester.tap(find.text('题库总量'));
-    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.textContaining('累计错题'));
+    await tester.tap(find.textContaining('累计错题'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('错题本目标页'), findsOneWidget);
     expect(container.read(selectedMasteryFilterProvider), isNull);
     expect(container.read(selectedCreatedTodayFilterProvider), isFalse);
 
     await returnHome();
-    await tester.ensureVisible(find.text('今日新增'));
-    await tester.tap(find.text('今日新增'));
-    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.textContaining('今日新增'));
+    await tester.tap(find.textContaining('今日新增'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('错题本目标页'), findsOneWidget);
     expect(container.read(selectedCreatedTodayFilterProvider), isTrue);
 
     await returnHome();
-    await tester.ensureVisible(find.text('已掌握'));
-    await tester.tap(find.text('已掌握'));
-    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.textContaining('已掌握'));
+    await tester.tap(find.textContaining('已掌握').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('错题本目标页'), findsOneWidget);
     expect(
         container.read(selectedMasteryFilterProvider), MasteryLevel.mastered);
     expect(container.read(selectedCreatedTodayFilterProvider), isFalse);
 
     await returnHome();
-    await tester.ensureVisible(find.text('待复习'));
-    await tester.tap(find.text('待复习'));
-    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.textContaining('待复习').first);
+    await tester.tap(find.textContaining('待复习').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('复习目标页'), findsOneWidget);
   });
 

@@ -2,7 +2,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smart_wrong_notebook/src/app/design/tokens.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/common/widgets/app_card.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/domain/models/generated_exercise.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
@@ -89,10 +91,10 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Icon(CupertinoIcons.question,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  size: 64, color: context.tokens.textSecondary),
               const SizedBox(height: 16),
-              const Text('暂无练习题', style: TextStyle(fontSize: 16)),
+              const Text('暂无练习题',
+                  style: TextStyle(fontSize: AppTokens.textBase)),
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () => context
@@ -110,8 +112,8 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
     final isCorrect = exercise.isCorrect == true;
     final isLast = _index >= exercises.length - 1;
     final answeredCount = exercises.where((e) => e.isCorrect != null).length;
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = context.tokens;
+    final difficultyColor = _difficultyColor(context, exercise.difficulty);
 
     return Scaffold(
       appBar: glassTopBar(context, 
@@ -125,7 +127,7 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
         children: <Widget>[
           LinearProgressIndicator(
             value: answeredCount / exercises.length,
-            backgroundColor: colorScheme.outlineVariant,
+            backgroundColor: t.cardBorder,
             minHeight: 3,
           ),
           Expanded(
@@ -138,51 +140,36 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _difficultyColor(context, exercise.difficulty)
-                            .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
+                        color: difficultyColor.withValues(alpha: 0.1),
+                        borderRadius:
+                            BorderRadius.circular(AppTokens.radiusSm),
                         border: Border.all(
-                            color:
-                                _difficultyColor(context, exercise.difficulty)
-                                    .withValues(alpha: 0.3)),
+                            color: difficultyColor.withValues(alpha: 0.3)),
                       ),
                       child: Text(
                         exercise.difficulty,
                         style: TextStyle(
-                            fontSize: 12,
-                            color:
-                                _difficultyColor(context, exercise.difficulty),
+                            fontSize: AppTokens.textXs,
+                            color: difficultyColor,
                             fontWeight: FontWeight.w500),
                       ),
                     ),
                     const Spacer(),
                     Text('$answeredCount/${exercises.length} 已答',
                         style: TextStyle(
-                            fontSize: 12, color: colorScheme.onSurfaceVariant)),
+                            fontSize: AppTokens.textXs,
+                            color: t.textSecondary)),
                   ],
                 ),
                 const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: colorScheme.outlineVariant),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black
-                              .withValues(alpha: isDark ? 0.12 : 0.03),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2))
-                    ],
-                  ),
+                AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text('第 ${_index + 1} 题',
                           style: TextStyle(
-                              fontSize: 12,
-                              color: colorScheme.onSurfaceVariant)),
+                              fontSize: AppTokens.textXs,
+                              color: t.textSecondary)),
                       const SizedBox(height: 8),
                       MathContentView(exercise.question,
                           style: Theme.of(context).textTheme.titleMedium),
@@ -212,30 +199,18 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
 
                     if (answered) {
                       if (isCorrectAnswer) {
-                        borderColor = const Color(0xFF16A34A);
-                        bgColor = isDark
-                            ? const Color(0xFF16A34A).withValues(alpha: 0.16)
-                            : const Color(0xFFF0FDF4);
-                        textColor = isDark
-                            ? const Color(0xFF16A34A)
-                            : const Color(0xFF166534);
+                        borderColor = t.success;
+                        bgColor = t.successSoft;
+                        textColor = t.success;
                       } else if (isSelected && !isCorrect) {
-                        borderColor = const Color(0xFFEA580C);
-                        bgColor = isDark
-                            ? const Color(0xFFEA580C).withValues(alpha: 0.16)
-                            : const Color(0xFFFFF7ED);
-                        textColor = isDark
-                            ? const Color(0xFFEA580C)
-                            : const Color(0xFF9A3412);
+                        borderColor = t.error;
+                        bgColor = t.errorSoft;
+                        textColor = t.error;
                       }
                     } else if (isSelected) {
-                      borderColor = const Color(0xFF6366F1);
-                      bgColor = isDark
-                          ? const Color(0xFF6366F1).withValues(alpha: 0.18)
-                          : const Color(0xFFEEF2FF);
-                      textColor = isDark
-                          ? const Color(0xFF818CF8)
-                          : const Color(0xFF4338CA);
+                      borderColor = t.primary;
+                      bgColor = t.primarySoft;
+                      textColor = t.primary;
                     }
 
                     return Padding(
@@ -246,11 +221,11 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: bgColor ?? colorScheme.surface,
-                            borderRadius: BorderRadius.circular(10),
+                            color: bgColor ?? t.card,
+                            borderRadius:
+                                BorderRadius.circular(AppTokens.radiusMd),
                             border: Border.all(
-                                color:
-                                    borderColor ?? colorScheme.outlineVariant),
+                                color: borderColor ?? t.cardBorder),
                           ),
                           child: Row(
                             children: <Widget>[
@@ -260,20 +235,20 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
                                 decoration: BoxDecoration(
                                   color: isSelected ||
                                           (answered && isCorrectAnswer)
-                                      ? (borderColor ?? const Color(0xFF6366F1))
-                                      : colorScheme.surfaceContainerHighest,
+                                      ? (borderColor ?? t.primary)
+                                      : t.formulaBg,
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Center(
                                   child: Text(
                                     optionLetter,
                                     style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: AppTokens.textSm,
                                       fontWeight: FontWeight.w600,
                                       color: isSelected ||
                                               (answered && isCorrectAnswer)
-                                          ? Colors.white
-                                          : colorScheme.onSurfaceVariant,
+                                          ? t.onPrimary
+                                          : t.textSecondary,
                                     ),
                                   ),
                                 ),
@@ -283,17 +258,16 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
                                 child: MathContentView(
                                   optionText,
                                   style: TextStyle(
-                                      fontSize: 14,
-                                      color:
-                                          textColor ?? colorScheme.onSurface),
+                                      fontSize: AppTokens.textSm,
+                                      color: textColor ?? t.textPrimary),
                                 ),
                               ),
                               if (answered && isCorrectAnswer)
-                                const Icon(CupertinoIcons.checkmark_circle,
-                                    color: Color(0xFF16A34A), size: 20)
+                                Icon(CupertinoIcons.checkmark_circle,
+                                    color: t.success, size: 20)
                               else if (answered && isSelected && !isCorrect)
-                                const Icon(CupertinoIcons.xmark_circle,
-                                    color: Color(0xFFEA580C), size: 20),
+                                Icon(CupertinoIcons.xmark_circle,
+                                    color: t.error, size: 20),
                             ],
                           ),
                         ),
@@ -308,7 +282,8 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
                       decoration: InputDecoration(
                         hintText: '输入你的答案',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius:
+                              BorderRadius.circular(AppTokens.radiusMd),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 12),
@@ -328,24 +303,12 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isCorrect
-                          ? (isDark
-                              ? const Color(0xFF16A34A).withValues(alpha: 0.16)
-                              : const Color(0xFFF0FDF4))
-                          : (isDark
-                              ? const Color(0xFFEA580C).withValues(alpha: 0.16)
-                              : const Color(0xFFFFF7ED)),
-                      borderRadius: BorderRadius.circular(12),
+                      color: isCorrect ? t.successSoft : t.errorSoft,
+                      borderRadius: BorderRadius.circular(AppTokens.radiusLg),
                       border: Border.all(
                           color: isCorrect
-                              ? (isDark
-                                  ? const Color(0xFF16A34A)
-                                      .withValues(alpha: 0.35)
-                                  : const Color(0xFFBBF7D0))
-                              : (isDark
-                                  ? const Color(0xFFEA580C)
-                                      .withValues(alpha: 0.35)
-                                  : const Color(0xFFFED7AA))),
+                              ? t.success.withValues(alpha: 0.35)
+                              : t.error.withValues(alpha: 0.35)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,9 +319,7 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
                               isCorrect
                                   ? CupertinoIcons.checkmark_circle
                                   : CupertinoIcons.xmark_circle,
-                              color: isCorrect
-                                  ? const Color(0xFF16A34A)
-                                  : const Color(0xFFEA580C),
+                              color: isCorrect ? t.success : t.error,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
@@ -366,13 +327,7 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
                               isCorrect ? '回答正确' : '回答错误',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: isCorrect
-                                    ? (isDark
-                                        ? const Color(0xFF16A34A)
-                                        : const Color(0xFF166534))
-                                    : (isDark
-                                        ? const Color(0xFFEA580C)
-                                        : const Color(0xFF9A3412)),
+                                color: isCorrect ? t.success : t.error,
                               ),
                             ),
                           ],
@@ -381,15 +336,16 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
                         MathContentView(
                           '正确答案：${exercise.answer}',
                           style: TextStyle(
-                              fontSize: 14, color: colorScheme.onSurface),
+                              fontSize: AppTokens.textSm,
+                              color: t.textPrimary),
                         ),
                         if (exercise.explanation.isNotEmpty) ...<Widget>[
                           const SizedBox(height: 8),
                           MathContentView(
                             exercise.explanation,
                             style: TextStyle(
-                                fontSize: 13,
-                                color: colorScheme.onSurfaceVariant),
+                                fontSize: AppTokens.textSm,
+                                color: t.textSecondary),
                           ),
                         ],
                       ],
@@ -443,7 +399,7 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
     List<GeneratedExercise> exercises,
     String fallbackRoute,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final t = context.tokens;
     final correctCount = exercises.where((e) => e.isCorrect == true).length;
     final roundIndex = _currentRoundIndex(exercises);
     final practiceContext = ref.read(currentPracticeContextProvider);
@@ -465,55 +421,51 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
             children: <Widget>[
               Expanded(
                 child: Center(
-                  child: Container(
+                  child: SizedBox(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: colorScheme.outlineVariant),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Container(
-                          width: 68,
-                          height: 68,
-                          decoration: BoxDecoration(
-                            color:
-                                const Color(0xFF16A34A).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(34),
-                          ),
-                          child: const Icon(
-                            CupertinoIcons.checkmark_circle_fill,
-                            size: 38,
-                            color: Color(0xFF16A34A),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          '举一反三完成',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '第 $roundIndex轮 ${exercises.length}题，答对 $correctCount题',
-                          style: TextStyle(color: colorScheme.onSurfaceVariant),
-                        ),
-                        if (!isAnalysisSource) ...<Widget>[
-                          const SizedBox(height: 8),
-                          Text(
-                            '本轮练习结果已保存到错题本',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: colorScheme.onSurfaceVariant,
+                    child: AppCard(
+                      padding: const EdgeInsets.all(AppTokens.s6),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Container(
+                            width: 68,
+                            height: 68,
+                            decoration: BoxDecoration(
+                              color: t.success.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(34),
+                            ),
+                            child: Icon(
+                              CupertinoIcons.checkmark_circle_fill,
+                              size: 38,
+                              color: t.success,
                             ),
                           ),
+                          const SizedBox(height: 18),
+                          Text(
+                            '举一反三完成',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '第 $roundIndex轮 ${exercises.length}题，答对 $correctCount题',
+                            style: TextStyle(color: t.textSecondary),
+                          ),
+                          if (!isAnalysisSource) ...<Widget>[
+                            const SizedBox(height: 8),
+                            Text(
+                              '本轮练习结果已保存到错题本',
+                              style: TextStyle(
+                                fontSize: AppTokens.textSm,
+                                color: t.textTertiary,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -720,20 +672,20 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
   }
 
   Color _difficultyColor(BuildContext context, String difficulty) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final t = context.tokens;
     switch (difficulty) {
       case '简单':
-        return const Color(0xFF16A34A);
+        return t.success;
       case '中等':
-        return const Color(0xFFD97706);
+        return t.warning;
       case '困难':
-        return const Color(0xFFDC2626);
+        return t.error;
       case '提高':
-        return const Color(0xFF7C3AED);
+        return t.secondary;
       case '同级':
-        return const Color(0xFF2563EB);
+        return t.primary;
       default:
-        return colorScheme.onSurfaceVariant;
+        return t.textSecondary;
     }
   }
 

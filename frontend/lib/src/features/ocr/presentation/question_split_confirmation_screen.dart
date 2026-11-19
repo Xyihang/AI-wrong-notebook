@@ -4,7 +4,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smart_wrong_notebook/src/app/design/tokens.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/common/widgets/app_card.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
@@ -43,8 +45,7 @@ class _QuestionSplitConfirmationScreenState
       );
     }
 
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = context.tokens;
     final safeIndex =
         drafts.isEmpty ? 0 : _activeIndex.clamp(0, drafts.length - 1);
     final activeDraft = drafts.isEmpty ? null : drafts[safeIndex];
@@ -63,14 +64,7 @@ class _QuestionSplitConfirmationScreenState
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: <Widget>[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: Theme.of(context).colorScheme.outlineVariant),
-              ),
+            AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -80,13 +74,11 @@ class _QuestionSplitConfirmationScreenState
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF4F46E5).withValues(alpha: 0.18)
-                              : const Color(0xFFEEF2FF),
+                          color: t.primarySoft,
                           borderRadius: BorderRadius.circular(18),
                         ),
-                        child: const Icon(CupertinoIcons.square_split_2x2,
-                            size: 18, color: Color(0xFF4F46E5)),
+                        child: Icon(CupertinoIcons.square_split_2x2,
+                            size: 18, color: t.primary),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -95,15 +87,14 @@ class _QuestionSplitConfirmationScreenState
                           children: <Widget>[
                             const Text('逐题确认后保存',
                                 style: TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w600)),
+                                    fontSize: AppTokens.textSm,
+                                    fontWeight: FontWeight.w600)),
                             const SizedBox(height: 2),
                             Text(
                               '保持当前分析结果页体验，保存前按题整理，方便后续检索、复习和继续练习。',
                               style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant),
+                                  fontSize: AppTokens.textXs,
+                                  color: t.textSecondary),
                             ),
                           ],
                         ),
@@ -117,40 +108,30 @@ class _QuestionSplitConfirmationScreenState
                     children: <Widget>[
                       _SummaryChip(
                         label: '可保存 ${drafts.length} 题',
-                        bgColor: isDark
-                            ? const Color(0xFF4F46E5).withValues(alpha: 0.18)
-                            : const Color(0xFFEEF2FF),
-                        textColor: const Color(0xFF4F46E5),
+                        bgColor: t.primarySoft,
+                        textColor: t.primary,
                       ),
                       _SummaryChip(
                         label: '已选 $selectedCount 题',
-                        bgColor: isDark
-                            ? const Color(0xFF16A34A).withValues(alpha: 0.16)
-                            : const Color(0xFFF0FDF4),
-                        textColor: const Color(0xFF16A34A),
+                        bgColor: t.successSoft,
+                        textColor: t.success,
                       ),
                       _SummaryChip(
                         label: source.subject.label,
-                        bgColor: isDark
-                            ? const Color(0xFFD97706).withValues(alpha: 0.16)
-                            : const Color(0xFFFFF7ED),
-                        textColor: const Color(0xFFD97706),
+                        bgColor: t.warningSoft,
+                        textColor: t.warning,
                       ),
                       if (session.failedCandidateCount > 0)
                         _SummaryChip(
                           label: '${session.failedCandidateCount} 题未解析成功',
-                          bgColor: isDark
-                              ? const Color(0xFFDC2626).withValues(alpha: 0.16)
-                              : const Color(0xFFFEF2F2),
-                          textColor: const Color(0xFFB91C1C),
+                          bgColor: t.errorSoft,
+                          textColor: t.error,
                         ),
                       if (session.retryingCandidateCount > 0)
                         _SummaryChip(
                           label: '${session.retryingCandidateCount} 题重新解析中',
-                          bgColor: isDark
-                              ? const Color(0xFFD97706).withValues(alpha: 0.16)
-                              : const Color(0xFFFFF7ED),
-                          textColor: const Color(0xFFB45309),
+                          bgColor: t.warningSoft,
+                          textColor: t.warning,
                         ),
                     ],
                   ),
@@ -165,14 +146,12 @@ class _QuestionSplitConfirmationScreenState
                   width: double.infinity,
                   constraints: const BoxConstraints(maxHeight: 220),
                   decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: Theme.of(context).colorScheme.outlineVariant),
+                    color: t.formulaBg,
+                    borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+                    border: Border.all(color: t.cardBorder),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppTokens.radiusLg),
                     child: Image.file(
                       File(source.imagePath),
                       fit: BoxFit.contain,
@@ -181,26 +160,18 @@ class _QuestionSplitConfirmationScreenState
                 ),
               ),
             if (hasImage) const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: Theme.of(context).colorScheme.outlineVariant),
-              ),
+            AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   const Text('题目列表',
-                      style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      style: TextStyle(
+                          fontSize: AppTokens.textSm,
+                          fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   Text('仅展示解析成功的题目。取消不需要保存的题目，点击卡片切换当前编辑项。',
                       style: TextStyle(
-                          fontSize: 12,
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant)),
+                          fontSize: AppTokens.textXs, color: t.textSecondary)),
                   const SizedBox(height: 8),
                   Row(
                     children: <Widget>[
@@ -229,24 +200,16 @@ class _QuestionSplitConfirmationScreenState
                       padding: const EdgeInsets.only(bottom: 8),
                       child: InkWell(
                         onTap: () => setState(() => _activeIndex = index),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius:
+                            BorderRadius.circular(AppTokens.radiusLg),
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: isActive
-                                ? (isDark
-                                    ? const Color(0xFF6366F1)
-                                        .withValues(alpha: 0.18)
-                                    : const Color(0xFFEEF2FF))
-                                : colorScheme.surface,
-                            borderRadius: BorderRadius.circular(12),
+                            color: isActive ? t.primarySoft : t.card,
+                            borderRadius:
+                                BorderRadius.circular(AppTokens.radiusLg),
                             border: Border.all(
-                              color: isActive
-                                  ? (isDark
-                                      ? const Color(0xFF6366F1)
-                                          .withValues(alpha: 0.45)
-                                      : const Color(0xFFC7D2FE))
-                                  : colorScheme.outlineVariant,
+                              color: isActive ? t.primary : t.cardBorder,
                             ),
                           ),
                           child: Row(
@@ -278,23 +241,20 @@ class _QuestionSplitConfirmationScreenState
                                           height: 24,
                                           decoration: BoxDecoration(
                                             color: isActive
-                                                ? const Color(0xFF6366F1)
-                                                : Theme.of(context)
-                                                    .colorScheme
-                                                    .surfaceContainerHighest,
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                                ? t.primary
+                                                : t.formulaBg,
+                                            borderRadius: BorderRadius.circular(
+                                                AppTokens.radiusLg),
                                           ),
                                           child: Center(
                                             child: Text(
                                               '${index + 1}',
                                               style: TextStyle(
-                                                fontSize: 12,
+                                                fontSize: AppTokens.textXs,
                                                 fontWeight: FontWeight.w600,
                                                 color: isActive
-                                                    ? Colors.white
-                                                    : colorScheme
-                                                        .onSurfaceVariant,
+                                                    ? t.onPrimary
+                                                    : t.textSecondary,
                                               ),
                                             ),
                                           ),
@@ -309,16 +269,12 @@ class _QuestionSplitConfirmationScreenState
                                             mode: MathContentViewMode.compact,
                                             maxLines: 1,
                                             style: TextStyle(
-                                              fontSize: 13,
+                                              fontSize: AppTokens.textSm,
                                               fontWeight: FontWeight.w500,
                                               color: draft.canSave &&
                                                       draft.selected
-                                                  ? Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurface
-                                                  : Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
+                                                  ? t.textPrimary
+                                                  : t.textSecondary,
                                             ),
                                           ),
                                         ),
@@ -329,10 +285,7 @@ class _QuestionSplitConfirmationScreenState
                               ),
                               const SizedBox(width: 8),
                               Icon(CupertinoIcons.chevron_right,
-                                  size: 18,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .outlineVariant),
+                                  size: 18, color: t.textTertiary),
                             ],
                           ),
                         ),
@@ -344,14 +297,7 @@ class _QuestionSplitConfirmationScreenState
             ),
             const SizedBox(height: 16),
             if (activeDraft != null)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant),
-                ),
+              AppCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -359,23 +305,20 @@ class _QuestionSplitConfirmationScreenState
                       children: <Widget>[
                         const Text('当前题目内容',
                             style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
+                                fontSize: AppTokens.textSm,
+                                fontWeight: FontWeight.w600)),
                         const Spacer(),
                         Text('第 ${activeDraft.originalOrder} 题',
                             style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant)),
+                                fontSize: AppTokens.textXs,
+                                color: t.textSecondary)),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Text('支持轻量修改，保存时会按当前内容逐题落库。',
                         style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant)),
+                            fontSize: AppTokens.textXs,
+                            color: t.textSecondary)),
                     const SizedBox(height: 12),
                     TextFormField(
                       key: ValueKey(activeDraft.id),
@@ -387,18 +330,16 @@ class _QuestionSplitConfirmationScreenState
                       decoration: InputDecoration(
                         hintText: '请输入题目内容',
                         filled: true,
-                        fillColor: colorScheme.surface,
+                        fillColor: t.card,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                              color:
-                                  Theme.of(context).colorScheme.outlineVariant),
+                          borderRadius:
+                              BorderRadius.circular(AppTokens.radiusLg),
+                          borderSide: BorderSide(color: t.cardBorder),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                              color:
-                                  Theme.of(context).colorScheme.outlineVariant),
+                          borderRadius:
+                              BorderRadius.circular(AppTokens.radiusLg),
+                          borderSide: BorderSide(color: t.cardBorder),
                         ),
                       ),
                     ),
@@ -415,29 +356,22 @@ class _QuestionSplitConfirmationScreenState
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFFDC2626).withValues(alpha: 0.14)
-                      : const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(12),
+                  color: t.errorSoft,
+                  borderRadius: BorderRadius.circular(AppTokens.radiusLg),
                   border: Border.all(
-                      color: isDark
-                          ? const Color(0xFFDC2626).withValues(alpha: 0.35)
-                          : const Color(0xFFFECACA)),
+                      color: t.error.withValues(alpha: 0.35)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Icon(CupertinoIcons.exclamationmark_triangle,
-                        size: 18, color: Color(0xFFDC2626)),
+                    Icon(CupertinoIcons.exclamationmark_triangle,
+                        size: 18, color: t.error),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _errorMessage!,
                         style: TextStyle(
-                            fontSize: 12,
-                            color: isDark
-                                ? const Color(0xFFDC2626)
-                                : const Color(0xFFB91C1C)),
+                            fontSize: AppTokens.textXs, color: t.error),
                       ),
                     ),
                   ],
@@ -473,7 +407,7 @@ class _QuestionSplitConfirmationScreenState
                           : '将保存已勾选的 $selectedCount 道题；未勾选题目不会写入错题本。',
               textAlign: TextAlign.center,
               style:
-                  TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                  TextStyle(fontSize: AppTokens.textXs, color: t.textTertiary),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -658,38 +592,35 @@ class _FormulaPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final trimmed = content.trim();
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            '公式预览',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+      child: AppCard(
+        padding: const EdgeInsets.all(AppTokens.s3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              '公式预览',
+              style: TextStyle(
+                fontSize: AppTokens.textXs,
+                fontWeight: FontWeight.w600,
+                color: t.textSecondary,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          trimmed.isEmpty
-              ? Text('暂无可预览内容',
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant))
-              : MathContentView(
-                  trimmed,
-                  contentFormat: contentFormat,
-                  style: const TextStyle(fontSize: 14),
-                ),
-        ],
+            const SizedBox(height: 8),
+            trimmed.isEmpty
+                ? Text('暂无可预览内容',
+                    style: TextStyle(
+                        fontSize: AppTokens.textSm, color: t.textTertiary))
+                : MathContentView(
+                    trimmed,
+                    contentFormat: contentFormat,
+                    style: const TextStyle(fontSize: AppTokens.textSm),
+                  ),
+          ],
+        ),
       ),
     );
   }
@@ -717,7 +648,9 @@ class _SummaryChip extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-            fontSize: 12, color: textColor, fontWeight: FontWeight.w500),
+            fontSize: AppTokens.textXs,
+            color: textColor,
+            fontWeight: FontWeight.w500),
       ),
     );
   }

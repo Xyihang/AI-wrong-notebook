@@ -3,7 +3,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smart_wrong_notebook/src/app/design/tokens.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/common/widgets/app_card.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
 import 'package:smart_wrong_notebook/src/data/services/question_analysis_coordinator.dart';
@@ -125,9 +127,10 @@ class _AnalysisLoadingScreenState extends ConsumerState<AnalysisLoadingScreen> {
   }
 
   Widget _buildErrorView() {
+    final t = context.tokens;
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppTokens.s6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -135,44 +138,40 @@ class _AnalysisLoadingScreenState extends ConsumerState<AnalysisLoadingScreen> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFFEA580C).withValues(alpha: 0.16)
-                    : const Color(0xFFFFF7ED),
+                color: t.warningSoft,
                 borderRadius: BorderRadius.circular(32),
               ),
-              child: const Icon(
+              child: Icon(
                 CupertinoIcons.exclamationmark_circle,
-                color: Color(0xFFEA580C),
+                color: t.warning,
                 size: 32,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTokens.s4),
             Text(
               _errorMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF9A3412)),
+              style: TextStyle(
+                  fontSize: AppTokens.textSm, color: t.textPrimary),
             ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: Theme.of(context).colorScheme.outlineVariant),
-              ),
+            const SizedBox(height: AppTokens.s6),
+            AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Text('调试信息:',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  const SizedBox(height: 8),
+                  Text('调试信息:',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: AppTokens.textXs,
+                          color: t.textSecondary)),
+                  const SizedBox(height: AppTokens.s2),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Text(_debugInfo ?? '',
-                        style: const TextStyle(
-                            fontSize: 11, fontFamily: 'monospace')),
+                        style: TextStyle(
+                            fontSize: AppTokens.textXs,
+                            fontFamily: 'monospace',
+                            color: t.textTertiary)),
                   ),
                 ],
               ),
@@ -254,7 +253,7 @@ class _LoadingViewState extends ConsumerState<_LoadingView>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final t = context.tokens;
     return Stack(
       children: <Widget>[
         Center(
@@ -267,17 +266,15 @@ class _LoadingViewState extends ConsumerState<_LoadingView>
                   width: 88,
                   height: 88,
                   decoration: BoxDecoration(
-                    color: theme.brightness == Brightness.dark
-                        ? const Color(0xFF6366F1).withValues(alpha: 0.18)
-                        : const Color(0xFFEEF2FF),
+                    color: t.primarySoft,
                     borderRadius: BorderRadius.circular(44),
                   ),
                   child: AnimatedBuilder(
                     animation: _controller,
                     builder: (_, __) => Transform.rotate(
                       angle: _controller.value * 2 * 3.14159,
-                      child: const Icon(CupertinoIcons.smiley,
-                          size: 44, color: Color(0xFF6366F1)),
+                      child: Icon(CupertinoIcons.smiley,
+                          size: 44, color: t.primary),
                     ),
                   ),
                 ),
@@ -305,8 +302,8 @@ class _LoadingViewState extends ConsumerState<_LoadingView>
                     _comfort[_comfortIndex],
                     key: ValueKey<int>(_comfortIndex),
                     style: TextStyle(
-                      fontSize: 13,
-                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: AppTokens.textSm,
+                      color: t.textSecondary,
                     ),
                   ),
                 ),
@@ -314,8 +311,10 @@ class _LoadingViewState extends ConsumerState<_LoadingView>
                   const SizedBox(height: 8),
                   Text(
                     widget.progressText!,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                        fontSize: AppTokens.textSm,
+                        fontWeight: FontWeight.w500,
+                        color: t.textPrimary),
                   ),
                 ],
                 if (widget.onContinueInBackground != null) ...<Widget>[
@@ -356,12 +355,12 @@ class _StageRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final t = context.tokens;
     final color = done
-        ? const Color(0xFF16A34A)
+        ? t.success
         : active
-            ? const Color(0xFF4F46E5)
-            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5);
+            ? t.primary
+            : t.textTertiary;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -379,7 +378,7 @@ class _StageRow extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: AppTokens.textSm,
               height: 1.3,
               color: color,
               fontWeight: active ? FontWeight.w600 : FontWeight.w400,
@@ -432,31 +431,32 @@ class _TipsCarouselState extends State<_TipsCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final t = context.tokens;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: theme.brightness == Brightness.dark
-            ? const Color(0xFF6366F1).withValues(alpha: 0.12)
-            : const Color(0xFFEEF2FF),
-        borderRadius: BorderRadius.circular(12),
+        color: t.primarySoft,
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Padding(
-            padding: EdgeInsets.only(top: 1),
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
             child: Icon(CupertinoIcons.lightbulb_fill,
-                size: 15, color: Color(0xFF6366F1)),
+                size: 15, color: t.primary),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppTokens.s2),
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 400),
               child: Text(
                 _tips[_index],
                 key: ValueKey<int>(_index),
-                style: const TextStyle(fontSize: 12, height: 1.4),
+                style: TextStyle(
+                    fontSize: AppTokens.textXs,
+                    height: 1.4,
+                    color: t.textPrimary),
               ),
             ),
           ),

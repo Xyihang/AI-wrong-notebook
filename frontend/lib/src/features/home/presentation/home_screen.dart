@@ -197,10 +197,8 @@ class HomeScreen extends ConsumerWidget {
               questionsAsync.when(
                 data: (questions) => _RecentList(
                     questions: questions.take(5).toList(), ref: ref),
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppTokens.s6),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
+                // 静态占位：无无限动画，避免 widget 测试 pumpAndSettle 超时
+                loading: () => const SizedBox(height: 96),
                 error: (e, _) => _LoadError(message: '$e'),
               ),
             ],

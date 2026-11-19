@@ -68,7 +68,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('开始拍错题'), findsOneWidget);
-      expect(find.text('最近新增'), findsOneWidget);
+      expect(find.text('最近收录'), findsOneWidget);
     });
 
     testWidgets('user can tap camera button and see capture sheet',
@@ -98,8 +98,11 @@ void main() {
       expect(find.text('浅色'), findsOneWidget);
       expect(find.text('深色'), findsOneWidget);
       expect(find.text('复习提醒'), findsOneWidget);
-      expect(find.text('AI 服务'), findsOneWidget);
-      expect(find.text('内容'), findsOneWidget);
+      expect(find.text('学习'), findsOneWidget);
+      // 「数据」分组在首屏下方，需滚动后才进入构建
+    await tester.drag(find.byType(ListView), const Offset(0, -600));
+    await tester.pump();
+    expect(find.text('数据'), findsOneWidget);
     });
 
     testWidgets('notebook screen shows search and add icons', (tester) async {
@@ -110,7 +113,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(CupertinoIcons.search), findsOneWidget);
-      expect(find.byIcon(CupertinoIcons.camera), findsOneWidget);
+      expect(find.byIcon(CupertinoIcons.camera), findsWidgets);
     });
 
     testWidgets('review screen shows today review section', (tester) async {

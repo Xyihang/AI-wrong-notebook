@@ -1,6 +1,22 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:smart_wrong_notebook/src/app/design/tokens.dart';
 import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
+
+// ---------------------------------------------------------------------------
+// 图表数据系列色（柱体之间需要互相区分，故刻意保留既有色值，不替换为语义 token）。
+// 除这三条系列色外，本文件的轴文字 / 网格线 / 提示框 / 容器底色一律走
+// `context.tokens`。
+// ---------------------------------------------------------------------------
+const Color _seriesMastered = Color(0xFF16A34A);
+const Color _seriesReviewing = Color(0xFFD97706);
+const Color _seriesNew = Color(0xFF6B7280);
+
+const Map<MasteryLevel, Color> _seriesColors = <MasteryLevel, Color>{
+  MasteryLevel.mastered: _seriesMastered,
+  MasteryLevel.reviewing: _seriesReviewing,
+  MasteryLevel.newQuestion: _seriesNew,
+};
 
 class StatsBarChart extends StatelessWidget {
   const StatsBarChart({
@@ -16,12 +32,6 @@ class StatsBarChart extends StatelessWidget {
   final int reviewing;
   final int newQ;
 
-  static const _colors = {
-    MasteryLevel.mastered: Color(0xFF16A34A),
-    MasteryLevel.reviewing: Color(0xFFD97706),
-    MasteryLevel.newQuestion: Color(0xFF6B7280),
-  };
-
   static const _labels = {
     MasteryLevel.mastered: '已掌握',
     MasteryLevel.reviewing: '复习中',
@@ -30,7 +40,7 @@ class StatsBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final t = context.tokens;
     final maxY =
         [mastered, reviewing, newQ].reduce((a, b) => a > b ? a : b).toDouble();
 
@@ -46,13 +56,16 @@ class StatsBarChart extends StatelessWidget {
               barTouchData: BarTouchData(
                 enabled: total > 0,
                 touchTooltipData: BarTouchTooltipData(
-                  getTooltipColor: (_) => const Color(0xFF1E293B),
-                  tooltipRoundedRadius: 6,
+                  getTooltipColor: (_) => t.card,
+                  tooltipRoundedRadius: AppTokens.radiusSm,
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     final level = MasteryLevel.values[group.x.toInt()];
                     return BarTooltipItem(
                       '${_labels[level]}\n${rod.toY.toInt()} 题',
-                      const TextStyle(color: Colors.white, fontSize: 12),
+                      TextStyle(
+                        color: t.textPrimary,
+                        fontSize: AppTokens.textXs,
+                      ),
                     );
                   },
                 ),
@@ -69,8 +82,8 @@ class StatsBarChart extends StatelessWidget {
                         child: Text(
                           _labels[level]!,
                           style: TextStyle(
-                            fontSize: 11,
-                            color: colorScheme.onSurfaceVariant,
+                            fontSize: AppTokens.textXs,
+                            color: t.textTertiary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -86,7 +99,12 @@ class StatsBarChart extends StatelessWidget {
                 rightTitles:
                     const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               ),
-              gridData: const FlGridData(show: false),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (value) =>
+                    FlLine(color: t.cardBorder, strokeWidth: 1),
+              ),
               borderData: FlBorderData(show: false),
               barGroups: <BarChartGroupData>[
                 BarChartGroupData(
@@ -94,10 +112,10 @@ class StatsBarChart extends StatelessWidget {
                   barRods: [
                     BarChartRodData(
                       toY: newQ.toDouble(),
-                      color: _colors[MasteryLevel.newQuestion],
+                      color: _seriesColors[MasteryLevel.newQuestion],
                       width: 28,
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(6)),
+                      borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(AppTokens.radiusSm)),
                     ),
                   ],
                 ),
@@ -106,10 +124,10 @@ class StatsBarChart extends StatelessWidget {
                   barRods: [
                     BarChartRodData(
                       toY: reviewing.toDouble(),
-                      color: _colors[MasteryLevel.reviewing],
+                      color: _seriesColors[MasteryLevel.reviewing],
                       width: 28,
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(6)),
+                      borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(AppTokens.radiusSm)),
                     ),
                   ],
                 ),
@@ -118,10 +136,10 @@ class StatsBarChart extends StatelessWidget {
                   barRods: [
                     BarChartRodData(
                       toY: mastered.toDouble(),
-                      color: _colors[MasteryLevel.mastered],
+                      color: _seriesColors[MasteryLevel.mastered],
                       width: 28,
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(6)),
+                      borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(AppTokens.radiusSm)),
                     ),
                   ],
                 ),
@@ -133,14 +151,15 @@ class StatsBarChart extends StatelessWidget {
         Row(
           children: <Widget>[
             _LegendDot(
-                color: _colors[MasteryLevel.newQuestion]!, label: '新增 ($newQ)'),
+                color: _seriesColors[MasteryLevel.newQuestion]!,
+                label: '新增 ($newQ)'),
             const SizedBox(width: 16),
             _LegendDot(
-                color: _colors[MasteryLevel.reviewing]!,
+                color: _seriesColors[MasteryLevel.reviewing]!,
                 label: '复习中 ($reviewing)'),
             const SizedBox(width: 16),
             _LegendDot(
-                color: _colors[MasteryLevel.mastered]!,
+                color: _seriesColors[MasteryLevel.mastered]!,
                 label: '已掌握 ($mastered)'),
           ],
         ),
@@ -157,7 +176,7 @@ class _LegendDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final t = context.tokens;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -171,7 +190,7 @@ class _LegendDot extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+          style: TextStyle(fontSize: AppTokens.textXs, color: t.textTertiary),
         ),
       ],
     );
@@ -202,8 +221,7 @@ class StatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = context.tokens;
 
     return Column(
       children: <Widget>[
@@ -213,11 +231,8 @@ class StatsGrid extends StatelessWidget {
               child: _StatCard(
                 label: '题库总量',
                 value: '$total',
-                bg: const Color(0xFFEFF6FF),
-                darkBg: const Color(0xFF2563EB).withValues(alpha: 0.14),
-                border: const Color(0xFFBFDBFE),
-                darkBorder: const Color(0xFF2563EB).withValues(alpha: 0.35),
-                text: const Color(0xFF2563EB),
+                accent: t.primary,
+                background: t.primarySoft,
                 onTap: onTotalTap,
               ),
             ),
@@ -226,14 +241,8 @@ class StatsGrid extends StatelessWidget {
               child: _StatCard(
                 label: '今日新增',
                 value: '$todayNew',
-                bg: const Color(0xFFF9FAFB),
-                darkBg: colorScheme.onSurfaceVariant.withValues(alpha: 0.12),
-                border: const Color(0xFFE5E7EB),
-                darkBorder:
-                    colorScheme.onSurfaceVariant.withValues(alpha: 0.28),
-                text: isDark
-                    ? colorScheme.onSurfaceVariant
-                    : const Color(0xFF6B7280),
+                accent: t.textSecondary,
+                background: t.formulaBg,
                 onTap: onTodayNewTap,
               ),
             ),
@@ -246,11 +255,8 @@ class StatsGrid extends StatelessWidget {
               child: _StatCard(
                 label: '已掌握',
                 value: '$mastered',
-                bg: const Color(0xFFF0FDF4),
-                darkBg: const Color(0xFF16A34A).withValues(alpha: 0.14),
-                border: const Color(0xFFBBF7D0),
-                darkBorder: const Color(0xFF16A34A).withValues(alpha: 0.35),
-                text: const Color(0xFF16A34A),
+                accent: t.success,
+                background: t.successSoft,
                 onTap: onMasteredTap,
               ),
             ),
@@ -259,11 +265,8 @@ class StatsGrid extends StatelessWidget {
               child: _StatCard(
                 label: '待复习',
                 value: '$pending',
-                bg: const Color(0xFFFFF7ED),
-                darkBg: const Color(0xFFEA580C).withValues(alpha: 0.14),
-                border: const Color(0xFFFED7AA),
-                darkBorder: const Color(0xFFEA580C).withValues(alpha: 0.35),
-                text: const Color(0xFFEA580C),
+                accent: t.warning,
+                background: t.warningSoft,
                 onTap: onPendingTap,
               ),
             ),
@@ -278,32 +281,35 @@ class _StatCard extends StatelessWidget {
   const _StatCard({
     required this.label,
     required this.value,
-    required this.bg,
-    required this.darkBg,
-    required this.border,
-    required this.darkBorder,
-    required this.text,
+    required this.accent,
+    required this.background,
     this.onTap,
   });
 
   final String label;
   final String value;
-  final Color bg;
-  final Color darkBg;
-  final Color border;
-  final Color darkBorder;
-  final Color text;
+
+  /// 语义强调色（主色 / 次要 / 成功 / 警告）。
+  final Color accent;
+
+  /// 浅色下的软底；深色下由 [accent] 叠透明度得出。
+  final Color background;
+
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = context.tokens;
+    final fill = t.isDark ? accent.withValues(alpha: 0.14) : background;
+    final border = t.isDark
+        ? accent.withValues(alpha: 0.35)
+        : accent.withValues(alpha: 0.22);
 
     return Material(
-      color: isDark ? darkBg : bg,
+      color: fill,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: isDark ? darkBorder : border),
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        side: BorderSide(color: border),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -315,9 +321,9 @@ class _StatCard extends StatelessWidget {
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: AppTokens.textLg,
                   fontWeight: FontWeight.bold,
-                  color: text,
+                  color: accent,
                 ),
               ),
               const SizedBox(height: 2),
@@ -325,10 +331,12 @@ class _StatCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(label, style: TextStyle(fontSize: 11, color: text)),
+                  Text(label,
+                      style: TextStyle(
+                          fontSize: AppTokens.textXs, color: accent)),
                   if (onTap != null) ...<Widget>[
                     const SizedBox(width: 2),
-                    Icon(Icons.chevron_right, size: 14, color: text),
+                    Icon(Icons.chevron_right, size: 14, color: accent),
                   ],
                 ],
               ),

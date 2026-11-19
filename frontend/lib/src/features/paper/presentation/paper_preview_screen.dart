@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
 import 'package:smart_wrong_notebook/src/data/remote/backend/backend_client.dart';
@@ -102,9 +103,8 @@ class PaperPreviewScreen extends ConsumerWidget {
   }
 
   Future<void> _chooseExport(BuildContext context, PaperResult paper) async {
-    final choice = await showModalBottomSheet<bool>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
+    final choice = await showAppSheet<bool>(context,
+builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[

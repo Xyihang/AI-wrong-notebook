@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 import 'package:smart_wrong_notebook/src/features/similar/similar_match.dart';
 import 'package:smart_wrong_notebook/src/features/similar/similar_question_popup.dart';
@@ -72,14 +73,7 @@ class SimilarPopupController extends Notifier<SimilarPopupState> {
     final context = ref.context;
     if (!context.mounted) return;
 
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+    await showAppSheet<void>(context,
       builder: (sheetContext) {
         return ConstrainedBox(
           constraints: BoxConstraints(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smart_wrong_notebook/src/domain/models/achievement.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 
 /// 新解锁徽章的「恭喜」弹层。每枚徽章显示 emoji + 名称。
 Future<void> showAchievementCelebration(
@@ -10,8 +11,7 @@ Future<void> showAchievementCelebration(
   final colorScheme = Theme.of(context).colorScheme;
   final isDark = Theme.of(context).brightness == Brightness.dark;
 
-  return showDialog<void>(
-    context: context,
+  return showAppDialog<void>(context,
     barrierDismissible: true,
     builder: (dialogContext) => Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

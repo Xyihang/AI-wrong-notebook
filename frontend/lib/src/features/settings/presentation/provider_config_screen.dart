@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/data/repositories/settings_repository.dart';
@@ -203,10 +204,7 @@ class _ProviderConfigScreenState extends ConsumerState<ProviderConfigScreen> {
 
   Future<void> _openModelPicker() async {
     if (_availableModels.isEmpty) return;
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
+    final selected = await showAppSheet<String>(context,
       builder: (_) => _ModelPickerSheet(
         models: _availableModels,
         selectedModel: _modelController.text.trim(),
@@ -242,10 +240,7 @@ class _ProviderConfigScreenState extends ConsumerState<ProviderConfigScreen> {
   }
 
   Future<void> _openManualModelEntry() async {
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
+    final selected = await showAppSheet<String>(context,
       builder: (_) => _ManualModelIdSheet(
         initialModel: _modelController.text.trim(),
       ),
@@ -315,8 +310,7 @@ class _ProviderConfigScreenState extends ConsumerState<ProviderConfigScreen> {
   Future<void> _maybeAskVisionMode(AiProviderConfig config) async {
     if (!isDeepSeekKey(config)) return;
     if (!mounted) return;
-    final enabled = await showDialog<bool>(
-      context: context,
+    final enabled = await showAppDialog<bool>(context,
       builder: (context) => AlertDialog(
         title: const Text('启用视觉模式？'),
         content: const Text('是否启用更精确的视觉模式（DeepSeek 视觉模型直接识别）？'),

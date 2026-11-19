@@ -69,6 +69,49 @@ Future<T?> showAppSheet<T>(
   );
 }
 
+/// 统一弹窗：玻璃开启时把 Material 的 AlertDialog 包进 GlassContainer
+/// （把内层 dialogTheme 变透明，露出玻璃面），关闭时完全回退 Material。
+Future<T?> showAppDialog<T>(
+  BuildContext context, {
+  required WidgetBuilder builder,
+  bool barrierDismissible = true,
+}) {
+  final container = ProviderScope.containerOf(context, listen: false);
+  final enabled = container.read(glassEnabledProvider);
+  final quality = container.read(glassQualityProvider);
+  if (!enabled) {
+    return showDialog<T>(
+      context: context,
+      barrierDismissible: barrierDismissible,
+      builder: builder,
+    );
+  }
+  return showDialog<T>(
+    context: context,
+    barrierDismissible: barrierDismissible,
+    builder: (ctx) => Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: GlassContainer(
+        quality: quality,
+        padding: EdgeInsets.zero,
+        child: Theme(
+          data: Theme.of(ctx).copyWith(
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              elevation: 0,
+            ),
+          ),
+          child: builder(ctx),
+        ),
+      ),
+    ),
+  );
+}
+
 /// 统一确认弹窗：玻璃开启时用 [GlassContainer] 作为弹窗表面，
 /// 否则回退 Material [AlertDialog]。返回 true=确认。
 Future<bool> showAppConfirm(

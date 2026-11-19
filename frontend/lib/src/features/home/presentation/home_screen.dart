@@ -236,8 +236,7 @@ class HomeScreen extends ConsumerWidget {
     WidgetRef ref,
     QuestionAnalysisTaskSnapshot task,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
+    final confirmed = await showAppDialog<bool>(context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('删除扫题任务'),
         content: const Text('确定删除这次扫题及其解析结果吗？此操作不可恢复。'),

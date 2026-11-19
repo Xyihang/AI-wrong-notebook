@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_refresh_indicator.dart';
 import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 import 'package:smart_wrong_notebook/src/domain/models/subject.dart';
@@ -234,10 +235,14 @@ class _NotebookScreenState extends ConsumerState<NotebookScreen> {
                     ),
                   );
                 }
-                return RefreshIndicator(
+                // B6：玻璃下拉刷新（关闭玻璃时内部直接透传，不显示指示器）
+                return GlassRefreshIndicator(
                   onRefresh: () async {
                     ref.invalidate(questionListProvider);
+                    await Future<void>.delayed(
+                        const Duration(milliseconds: 350));
                   },
+                  edgeOffset: glassEnabled ? glassTopInset(context) : 0,
                   child: ListView.builder(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 24, vertical: 4),

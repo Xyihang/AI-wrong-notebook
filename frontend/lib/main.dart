@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
 import 'package:smart_wrong_notebook/src/features/auth/presentation/login_screen.dart';
 import 'package:smart_wrong_notebook/src/features/auth/presentation/register_screen.dart';
@@ -106,8 +107,7 @@ void main() async {
       // 大 token 重试前的提示弹窗（仅提示，不询问选择）。
       final ctx = navigatorKey.currentContext;
       if (ctx == null) return;
-      await showDialog<void>(
-        context: ctx,
+      await showAppDialog<void>(ctx,
         builder: (dialogCtx) => AlertDialog(
           title: const Text('题目较复杂'),
           content: const Text(

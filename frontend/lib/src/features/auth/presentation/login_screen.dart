@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
 import 'package:smart_wrong_notebook/src/core/constants/app_config.dart';
 import 'package:smart_wrong_notebook/src/data/remote/config/backend_config_resolver.dart';
@@ -74,8 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // 未配置（缺 Base URL / API Key）才拦截。
     if (!configured) {
       if (!mounted) return;
-      final go = await showDialog<bool>(
-        context: context,
+      final go = await showAppDialog<bool>(context,
         builder: (c) => AlertDialog(
           title: const Text('游客模式需要先配置 AI'),
           content: const Text(
@@ -108,8 +108,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
 
     if (!visionCapable) {
-      await showDialog<void>(
-        context: context,
+      await showAppDialog<void>(context,
         builder: (c) => AlertDialog(
           title: const Text('提示：当前模型不含视觉能力'),
           content: Text(

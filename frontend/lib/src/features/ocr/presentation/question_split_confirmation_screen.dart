@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_split_session.dart';
@@ -608,8 +609,7 @@ class _QuestionSplitConfirmationScreenState
     int selectedCount,
   ) {
     if (session.failedCandidateCount == 0) return Future<bool?>.value(true);
-    return showDialog<bool>(
-      context: context,
+    return showAppDialog<bool>(context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('保存已解析题目'),
         content: Text(

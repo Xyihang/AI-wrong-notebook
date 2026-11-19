@@ -644,8 +644,7 @@ class QuestionDetailScreen extends ConsumerWidget {
   void _editQuestion(
       BuildContext context, WidgetRef ref, QuestionRecord question) {
     final controller = TextEditingController(text: question.correctedText);
-    showDialog<void>(
-      context: context,
+    showAppDialog<void>(context,
       builder: (ctx) => AlertDialog(
         title: const Text('编辑题目'),
         content: TextFormField(
@@ -727,8 +726,7 @@ class QuestionDetailScreen extends ConsumerWidget {
   void _showAddTagDialog(
       BuildContext context, WidgetRef ref, QuestionRecord question) {
     final controller = TextEditingController();
-    showDialog<void>(
-      context: context,
+    showAppDialog<void>(context,
       builder: (ctx) => AlertDialog(
         title: const Text('添加标签'),
         content: Column(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/domain/models/ai_provider_config.dart';
 import 'package:smart_wrong_notebook/src/features/settings/presentation/ai_provider_preset.dart';
 import 'package:smart_wrong_notebook/src/features/setup/setup_controller.dart';
@@ -156,10 +157,7 @@ class ProviderPageState extends ConsumerState<ProviderPage>
       _showStatus('没有获取到可用模型，可手动填写模型 ID', isError: true);
       return;
     }
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
+    final selected = await showAppSheet<String>(context,
       builder: (_) => _ModelSheet(models: _availableModels),
     );
     if (!mounted || selected == null) return;

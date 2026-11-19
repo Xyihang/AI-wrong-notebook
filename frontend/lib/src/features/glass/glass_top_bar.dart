@@ -18,7 +18,7 @@ PreferredSizeWidget glassTopBar(
   required Widget title,
   List<Widget>? actions,
   Widget? leading,
-  bool centerTitle = false,
+  bool centerTitle = true,
 }) {
   final container = ProviderScope.containerOf(context, listen: false);
   if (!container.read(glassEnabledProvider)) {
@@ -49,7 +49,7 @@ class GlassTopBar extends ConsumerWidget {
     required this.topInset,
     this.actions,
     this.leading,
-    this.centerTitle = false,
+    this.centerTitle = true,
     super.key,
   });
 

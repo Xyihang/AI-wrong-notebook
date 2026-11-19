@@ -9,6 +9,7 @@ import 'package:smart_wrong_notebook/src/core/constants/app_config.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_appearance.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/app_card_surface.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/features/glass/page_background.dart';
 
@@ -418,11 +419,7 @@ class _SettingsSection extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
+      decoration: AppCardSurface.decoration(context),
       child: child,
     );
   }

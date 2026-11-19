@@ -7,6 +7,7 @@ import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/common/widgets/stats_chart.dart';
 import 'package:smart_wrong_notebook/src/data/services/question_analysis_coordinator.dart';
 import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
@@ -81,7 +82,10 @@ class HomeScreen extends ConsumerWidget {
       }
     });
 
-    return SafeArea(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: glassTopBar(context, title: const Text('开始拍错题')),
+      body: SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
         children: <Widget>[
@@ -106,14 +110,7 @@ class HomeScreen extends ConsumerWidget {
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
           ),
-          Text(
-            '开始拍错题',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           _CaptureButton(
             onTap: () => showAppSheet<void>(
               context,
@@ -196,6 +193,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
+    ),
     );
   }
 

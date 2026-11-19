@@ -11,6 +11,7 @@ import 'package:smart_wrong_notebook/src/shared/widgets/math_content_view.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:smart_wrong_notebook/src/features/glass/app_card_surface.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 
 class NotebookScreen extends ConsumerStatefulWidget {
@@ -400,11 +401,9 @@ class _QuestionCard extends StatelessWidget {
             onTap: onTap,
             child: Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colorScheme.outlineVariant),
-                boxShadow: [
+              // A+B：深色下半透明提亮 + 亮描边，避免整块死黑
+              decoration: AppCardSurface.decoration(context).copyWith(
+                boxShadow: <BoxShadow>[
                   BoxShadow(
                       color:
                           Colors.black.withValues(alpha: isDark ? 0.12 : 0.03),

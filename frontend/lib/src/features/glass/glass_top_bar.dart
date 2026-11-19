@@ -75,25 +75,29 @@ class GlassTopBar extends ConsumerWidget {
 
   Widget _buildBar(
       BuildContext context, WidgetRef ref, ColorScheme scheme, double progress) {
-    if (progress <= 0.01) {
-      // 未滚动：完全透明，只占位（内容仍从下方穿过）
-      return SizedBox(
-        height: kToolbarHeight + topInset,
-        child: Padding(
-          padding: EdgeInsets.only(top: topInset),
-          child: _buildContent(scheme),
-        ),
-      );
-    }
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: 0.35 * progress),
-      ),
-      child: GlassContainer(
-        quality: ref.watch(glassQualityProvider),
-        shape: const LiquidRoundedSuperellipse(borderRadius: 0),
-        padding: EdgeInsets.only(top: topInset),
-        child: _buildContent(scheme),
+    // 平滑过渡：模糊强度与着色都按 progress 线性增长（不做阈值跳变）
+    final sigma = 18.0 * progress;
+    return SizedBox(
+      height: kToolbarHeight + topInset,
+      child: Stack(
+        children: <Widget>[
+          if (sigma > 0.2)
+            Positioned.fill(
+              child: ProgressiveBlur(
+                maxSigma: sigma,
+                direction: ProgressiveBlurDirection.topToBottom,
+              ),
+            ),
+          Positioned.fill(
+            child: ColoredBox(
+              color: scheme.surface.withValues(alpha: 0.42 * progress),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.only(top: topInset),
+            child: _buildContent(scheme),
+          ),
+        ],
       ),
     );
   }

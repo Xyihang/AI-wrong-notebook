@@ -10,6 +10,7 @@ import 'package:smart_wrong_notebook/src/features/glass/glass_appearance.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
+import 'package:smart_wrong_notebook/src/features/glass/page_background.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -58,6 +59,61 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
+  /// 选择页面背景（衬托玻璃）。
+  Future<void> _pickPageBackground(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selection = ref.read(pageBackgroundProvider);
+    final current = selection.forDark(isDark);
+    // 只列当前模式可用的背景：深色模式只给深色背景，浅色模式只给浅色背景
+    final options =
+        PageBackground.values.where((e) => e.isDark == isDark).toList();
+    final selected = await showAppSheet<PageBackground>(
+      context,
+      bottomInset: 20,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: Text(
+                '页面背景',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+            ),
+            for (final item in options)
+              RadioListTile<PageBackground>(
+                value: item,
+                // ignore: deprecated_member_use
+                groupValue: current,
+                secondary: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset(
+                    item.asset,
+                    width: 34,
+                    height: 54,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                title: Text(item.label),
+                // ignore: deprecated_member_use
+                onChanged: (value) => Navigator.pop(ctx, value),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (selected != null) {
+      await ref
+          .read(pageBackgroundProvider.notifier)
+          .set(selected, dark: isDark);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
@@ -66,6 +122,9 @@ class SettingsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final glassEnabled = ref.watch(glassEnabledProvider);
+    final pageBg = ref
+        .watch(pageBackgroundProvider)
+        .forDark(Theme.of(context).brightness == Brightness.dark);
 
     return Scaffold(
       extendBodyBehindAppBar: glassEnabled,
@@ -179,15 +238,28 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           // 液态玻璃外观：自动/低/中/高/关闭（详见 docs/SPEC-LIQUID-GLASS.md）
           _SettingsSection(
-            child: _SettingsListItem(
-              icon: CupertinoIcons.square_on_square,
-              iconColor: const Color(0xFF8B5CF6),
-              lightIconBg: const Color(0xFFF5F3FF),
-              title: '玻璃外观',
-              subtitle:
-                  '${ref.watch(glassAppearanceProvider).label} · '
-                  '设备档位：${ref.watch(glassTierProvider).label}',
-              onTap: () => _pickGlassAppearance(context, ref),
+            child: Column(
+              children: <Widget>[
+                _SettingsListItem(
+                  icon: CupertinoIcons.square_on_square,
+                  iconColor: const Color(0xFF8B5CF6),
+                  lightIconBg: const Color(0xFFF5F3FF),
+                  title: '玻璃外观',
+                  subtitle: '${ref.watch(glassAppearanceProvider).label} · '
+                      '设备档位：${ref.watch(glassTierProvider).label}',
+                  onTap: () => _pickGlassAppearance(context, ref),
+                ),
+                Divider(
+                    height: 1, indent: 56, color: colorScheme.outlineVariant),
+                _SettingsListItem(
+                  icon: CupertinoIcons.photo,
+                  iconColor: const Color(0xFF0EA5E9),
+                  lightIconBg: const Color(0xFFE0F2FE),
+                  title: '页面背景',
+                  subtitle: pageBg.label,
+                  onTap: () => _pickPageBackground(context, ref),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),

@@ -51,6 +51,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:smart_wrong_notebook/src/features/glass/device_profile.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_appearance.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/page_background.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_warmup.dart';
 
 void main() async {
@@ -70,9 +71,21 @@ void main() async {
   // 玻璃外观：读取用户偏好 + 采集设备画像判档（默认中档）。
   var glassAppearance = GlassAppearance.auto;
   var deviceTier = GlassTier.mid;
+  var backgroundSelection = BackgroundSelection(
+    light: PageBackground.defaultFor(dark: false),
+    dark: PageBackground.defaultFor(dark: true),
+  );
   try {
     glassAppearance = GlassAppearance.fromStorage(
       await settingsRepo.getString(GlassAppearanceNotifier.key),
+    );
+    backgroundSelection = BackgroundSelection(
+      light: PageBackground.fromStorage(
+          await settingsRepo.getString(PageBackgroundNotifier.lightKey),
+          dark: false),
+      dark: PageBackground.fromStorage(
+          await settingsRepo.getString(PageBackgroundNotifier.darkKey),
+          dark: true),
     );
     final profile = await DeviceProfile.collect();
     deviceTier = profile.resolveTier();
@@ -271,6 +284,9 @@ void main() async {
           glassAppearanceProvider.overrideWith(
             (ref) => GlassAppearanceNotifier(settingsRepo, glassAppearance),
           ),
+          pageBackgroundProvider.overrideWith(
+            (ref) => PageBackgroundNotifier(settingsRepo, backgroundSelection),
+          ),
         ],
         child: Consumer(
           builder: (context, ref, _) {
@@ -296,6 +312,28 @@ void main() async {
               themeMode: ref.watch(themeModeProvider),
               routerConfig: router,
               debugShowCheckedModeBanner: false,
+              builder: (context, child) {
+                final selection = ref.watch(pageBackgroundProvider);
+                final theme = Theme.of(context);
+                final bg = selection
+                    .forDark(theme.brightness == Brightness.dark);
+                if (child == null) return const SizedBox.shrink();
+                return Theme(
+                  // 让页面 Scaffold 透明，露出背景图（玻璃才能折射它）
+                  data: theme.copyWith(
+                      scaffoldBackgroundColor: Colors.transparent),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: <Widget>[
+                      PageBackgroundLayer(
+                        background: bg,
+                        dark: theme.brightness == Brightness.dark,
+                      ),
+                      child,
+                    ],
+                  ),
+                );
+              },
             );
           },
         ),

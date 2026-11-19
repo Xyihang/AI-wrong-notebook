@@ -70,27 +70,50 @@ class GlassTopBar extends ConsumerWidget {
       padding: EdgeInsets.only(top: topInset),
       child: SizedBox(
         height: kToolbarHeight,
-        child: Row(
+        // 用 Stack 让标题相对整条顶栏水平居中（不受左右按钮宽度影响），
+        // 左右按钮浮在上层，标题两侧留出安全边距避免被压。
+        child: Stack(
           children: <Widget>[
-            if (leading != null) leading!,
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(left: leading == null ? 16 : 4),
-                child: DefaultTextStyle(
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                  child: Align(
-                    alignment:
-                        centerTitle ? Alignment.center : Alignment.centerLeft,
-                    child: title,
+            if (centerTitle)
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 64),
+                  child: Center(
+                    child: DefaultTextStyle(
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
+                      ),
+                      child: title,
+                    ),
                   ),
                 ),
               ),
-            ),
-            if (actions != null) ...actions!,
+            if (!centerTitle)
+              Positioned.fill(
+                child: Padding(
+                  padding: EdgeInsets.only(left: leading == null ? 16 : 56),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: DefaultTextStyle(
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
+                      ),
+                      child: title,
+                    ),
+                  ),
+                ),
+              ),
+            if (leading != null)
+              Align(alignment: Alignment.centerLeft, child: leading!),
+            if (actions != null && actions!.isNotEmpty)
+              Align(
+                alignment: Alignment.centerRight,
+                child: Row(mainAxisSize: MainAxisSize.min, children: actions!),
+              ),
           ],
         ),
       ),

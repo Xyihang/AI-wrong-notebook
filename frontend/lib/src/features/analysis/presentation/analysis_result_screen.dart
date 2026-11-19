@@ -126,7 +126,17 @@ class _AnalysisResultScreenState extends ConsumerState<AnalysisResultScreen> {
     final needsReview = displayResult?.visualAssumptionStatus ==
         VisualAssumptionStatus.needsReview;
     final t = context.tokens;
-    return Scaffold(
+return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/');
+        }
+      },
+      child: Scaffold(
       appBar: glassTopBar(context, 
         title: const Text('AI 解析结果'),
         leading: IconButton(
@@ -581,6 +591,7 @@ class _AnalysisResultScreenState extends ConsumerState<AnalysisResultScreen> {
           ],
         ],
       ),
+    ),
     );
   }
 

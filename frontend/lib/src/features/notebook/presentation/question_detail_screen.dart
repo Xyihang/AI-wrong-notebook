@@ -214,6 +214,17 @@ class QuestionDetailScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: AppTokens.s3),
+            // 标记为已掌握（与「加入复习」互斥的另一种掌握度操作）
+            AppButton(
+              label: current.masteryLevel == MasteryLevel.mastered
+                  ? '标记为仍需复习'
+                  : '标记为已掌握',
+              kind: AppButtonKind.success,
+              icon: CupertinoIcons.check_mark_circled,
+              onPressed: () => _markResult(context, ref, current,
+                  current.masteryLevel != MasteryLevel.mastered),
+            ),
             const SizedBox(height: AppTokens.s6),
             _AskAiCard(current: current),
             const SizedBox(height: AppTokens.s4),

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/common/widgets/app_fab.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_edge_fade.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
 import 'package:smart_wrong_notebook/src/features/auth/presentation/login_screen.dart';
@@ -406,8 +408,28 @@ class ScaffoldWithNavBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final glassEnabled = ref.watch(glassEnabledProvider);
     final quality = ref.watch(glassQualityProvider);
+    // 所有 Tab 页统一处理「内容 ↔ 底部 Dock」连接处：
+    // 玻璃开启用 ProgressiveBlur 渐进模糊，关闭时用同色渐变，避免硬切。
+    const double dockFadeHeight = 104;
     return Scaffold(
-      body: navigationShell,
+      body: Stack(
+        children: <Widget>[
+          navigationShell,
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: dockFadeHeight,
+            child: glassEnabled
+                ? const GlassEdgeFade(
+                    height: dockFadeHeight,
+                    maxSigma: 18,
+                    direction: ProgressiveBlurDirection.bottomToTop,
+                  )
+                : const AppBottomFade(height: dockFadeHeight),
+          ),
+        ],
+      ),
       bottomNavigationBar: glassEnabled
           ? GlassTabBar.bottom(
               tabs: _glassTabs,

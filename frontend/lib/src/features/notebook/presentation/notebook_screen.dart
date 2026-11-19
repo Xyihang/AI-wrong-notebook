@@ -295,12 +295,8 @@ class _NotebookScreenState extends ConsumerState<NotebookScreen> {
                           context.push('/notebook/question/${q.id}');
                         },
                         onDelete: () => _confirmDelete(context, ref, q),
-                        onKnowledgePointTap: (kp) {
-                          ref
-                              .read(selectedKnowledgePointFilterProvider
-                                  .notifier)
-                              .state = kp;
-                        },
+                        // 按需求：点击知识点标签不再筛选
+                        onKnowledgePointTap: (_) {},
                       );
                       return RepaintBoundary(
                         child: glassEnabled
@@ -509,10 +505,7 @@ class _QuestionCard extends StatelessWidget {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: <Widget>[
                         ...knowledgePoints.take(3).map(
-                              (tag) => GestureDetector(
-                                onTap: () => onKnowledgePointTap(tag),
-                                child: AppTag(tag),
-                              ),
+                              (tag) => AppTag(tag),
                             ),
                         if (sameCount > 0)
                           AppTag(

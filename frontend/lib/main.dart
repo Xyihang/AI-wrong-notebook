@@ -295,18 +295,19 @@ void main() async {
           builder: (context, ref, _) {
             // P3/C3：高档设备 + 玻璃开启时，页面切换使用玻璃转场
             // 用户要求：全部关闭页面转场动画
-            const noTransitions = PageTransitionsTheme(
+            // Android：淡入淡出；iOS：系统原生（保留侧滑返回手势）
+            const appTransitions = PageTransitionsTheme(
               builders: <TargetPlatform, PageTransitionsBuilder>{
-                TargetPlatform.android: NoPageTransitionsBuilder(),
-                TargetPlatform.iOS: NoPageTransitionsBuilder(),
+                TargetPlatform.android: AppFadeTransitionsBuilder(),
+                TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
               },
             );
             final light = buildLightTheme();
             final dark = buildDarkTheme();
             return MaterialApp.router(
               title: 'AI错题本',
-              theme: light.copyWith(pageTransitionsTheme: noTransitions),
-              darkTheme: dark.copyWith(pageTransitionsTheme: noTransitions),
+              theme: light.copyWith(pageTransitionsTheme: appTransitions),
+              darkTheme: dark.copyWith(pageTransitionsTheme: appTransitions),
               themeMode: ref.watch(themeModeProvider),
               routerConfig: router,
               debugShowCheckedModeBanner: false,
@@ -460,12 +461,16 @@ class ScaffoldWithNavBar extends ConsumerWidget {
 }
 
 
-/// 完全关闭页面转场动画（用户要求）：新页面直接出现，不做滑动/淡入。
-class NoPageTransitionsBuilder extends PageTransitionsBuilder {
-  const NoPageTransitionsBuilder();
+/// 淡入淡出转场（Android 用；iOS 保留原生 Cupertino 以支持侧滑返回）。
+class AppFadeTransitionsBuilder extends PageTransitionsBuilder {
+  const AppFadeTransitionsBuilder({
+    this.duration = const Duration(milliseconds: 180),
+  });
+
+  final Duration duration;
 
   @override
-  Duration get transitionDuration => Duration.zero;
+  Duration get transitionDuration => duration;
 
   @override
   Widget buildTransitions<T>(
@@ -474,6 +479,14 @@ class NoPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
     Widget child,
-  ) =>
-      child;
+  ) {
+    return FadeTransition(
+      opacity: CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOut,
+        reverseCurve: Curves.easeOut,
+      ),
+      child: child,
+    );
+  }
 }

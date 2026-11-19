@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
 import 'package:smart_wrong_notebook/src/data/remote/backend/backend_client.dart';
 import 'package:smart_wrong_notebook/src/domain/models/content_status.dart';
@@ -158,10 +160,17 @@ class _PaperSetupScreenState extends ConsumerState<PaperSetupScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final glassEnabled = ref.watch(glassEnabledProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('AI 变式组卷')),
+      extendBodyBehindAppBar: glassEnabled,
+      appBar: glassTopBar(context, title: const Text('AI 变式组卷')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          16 + (glassEnabled ? glassTopInset(context) : 0),
+          20,
+          32,
+        ),
         children: <Widget>[
           Text('挑范围，AI 帮你优先用本人错题、不足自动补变式出一套小卷',
               style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant)),

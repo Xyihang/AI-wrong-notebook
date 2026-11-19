@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
 import 'package:smart_wrong_notebook/src/common/widgets/stats_chart.dart';
 import 'package:smart_wrong_notebook/src/data/services/question_analysis_coordinator.dart';
 import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
@@ -112,16 +114,12 @@ class HomeScreen extends ConsumerWidget {
                 ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: () => showAppSheet<void>(
+          _CaptureButton(
+            onTap: () => showAppSheet<void>(
               context,
               bottomInset: 84,
               builder: (_) => const CaptureEntrySheet(),
             ),
-            icon: const Icon(CupertinoIcons.camera),
-            label: const Text('拍照录题'),
-            style: FilledButton.styleFrom(
-                minimumSize: const Size(double.infinity, 52)),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
@@ -798,6 +796,36 @@ class _LocalDataNotice extends StatelessWidget {
 }
 
 /// 游客模式提示条：提醒登录以云端同步。
+/// 首页「拍照录题」按钮：玻璃开启时用 `GlassButton`，否则回退 Material。
+class _CaptureButton extends ConsumerWidget {
+  const _CaptureButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(glassEnabledProvider)) {
+      return FilledButton.icon(
+        onPressed: onTap,
+        icon: const Icon(CupertinoIcons.camera),
+        label: const Text('拍照录题'),
+        style: FilledButton.styleFrom(
+            minimumSize: const Size(double.infinity, 52)),
+      );
+    }
+    // 玻璃按钮：整行宽度，高度 52
+    final width = MediaQuery.sizeOf(context).width - 48;
+    return GlassButton(
+      icon: const Icon(CupertinoIcons.camera, size: 20),
+      label: '拍照录题',
+      width: width,
+      height: 52,
+      onTap: onTap,
+      quality: ref.watch(glassQualityProvider),
+    );
+  }
+}
+
 class _GuestBanner extends StatelessWidget {
   const _GuestBanner({required this.onLogin});
 

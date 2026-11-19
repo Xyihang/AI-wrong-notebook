@@ -241,23 +241,38 @@ class _NotebookScreenState extends ConsumerState<NotebookScreen> {
                     itemCount: questions.length,
                     itemBuilder: (context, index) {
                       final q = questions[index];
+                      final card = _QuestionCard(
+                        question: q,
+                        onTap: () {
+                          ref.read(currentQuestionProvider.notifier).state =
+                              q;
+                          // 用 push 保留返回栈：系统返回键回到错题本而不是首页
+                          context.push('/notebook/question/${q.id}');
+                        },
+                        onDelete: () => _confirmDelete(context, ref, q),
+                        onKnowledgePointTap: (kp) {
+                          ref
+                              .read(selectedKnowledgePointFilterProvider
+                                  .notifier)
+                              .state = kp;
+                        },
+                      );
                       return RepaintBoundary(
-                        child: _QuestionCard(
-                          question: q,
-                          onTap: () {
-                            ref.read(currentQuestionProvider.notifier).state =
-                                q;
-                            // 用 push 保留返回栈：系统返回键回到错题本而不是首页
-                            context.push('/notebook/question/${q.id}');
-                          },
-                          onDelete: () => _confirmDelete(context, ref, q),
-                          onKnowledgePointTap: (kp) {
-                            ref
-                                .read(selectedKnowledgePointFilterProvider
-                                    .notifier)
-                                .state = kp;
-                          },
-                        ),
+                        child: glassEnabled
+                            // 玻璃开启：左滑出玻璃操作（删除）
+                            ? GlassSwipeActions(
+                                child: card,
+                                trailingActions: <GlassSwipeAction>[
+                                  GlassSwipeAction(
+                                    icon: const Icon(CupertinoIcons.trash),
+                                    label: const Text('删除'),
+                                    isDestructive: true,
+                                    onTap: () =>
+                                        _confirmDelete(context, ref, q),
+                                  ),
+                                ],
+                              )
+                            : card,
                       );
                     },
                   ),

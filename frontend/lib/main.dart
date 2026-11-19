@@ -409,8 +409,8 @@ class ScaffoldWithNavBar extends ConsumerWidget {
     final glassEnabled = ref.watch(glassEnabledProvider);
     final quality = ref.watch(glassQualityProvider);
     // 所有 Tab 页统一处理「内容 ↔ 底部 Dock」连接处：
-    // 玻璃开启用 ProgressiveBlur 渐进模糊，关闭时用同色渐变，避免硬切。
-    const double dockFadeHeight = 104;
+    // 与原来首页一致——28px 同色渐变（不做模糊，避免过度虚化）。
+    const double dockFadeHeight = 28;
     return Scaffold(
       body: Stack(
         children: <Widget>[
@@ -420,13 +420,7 @@ class ScaffoldWithNavBar extends ConsumerWidget {
             right: 0,
             bottom: 0,
             height: dockFadeHeight,
-            child: glassEnabled
-                ? const GlassEdgeFade(
-                    height: dockFadeHeight,
-                    maxSigma: 18,
-                    direction: ProgressiveBlurDirection.bottomToTop,
-                  )
-                : const AppBottomFade(height: dockFadeHeight),
+            child: const AppBottomFade(height: dockFadeHeight),
           ),
         ],
       ),

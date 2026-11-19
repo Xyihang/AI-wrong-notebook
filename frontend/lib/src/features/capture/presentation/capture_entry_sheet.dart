@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
 
 class CaptureEntrySheet extends ConsumerStatefulWidget {
   const CaptureEntrySheet({super.key});
@@ -21,26 +22,33 @@ class _CaptureEntrySheetState extends ConsumerState<CaptureEntrySheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const orange = Color(0xFFEA580C);
 
+    // 只有玻璃开启时才固定尺寸（入口态与加载态一致）；Material 下按内容自适应。
+    final glassEnabled = ref.watch(glassEnabledProvider);
     return SizedBox(
       width: double.infinity,
-      // 固定高度：入口态与「正在打开相机」态占据完全相同的尺寸与位置
-      height: 300,
+      height: glassEnabled ? 300 : null,
       child: SafeArea(
-        child: Center(
+        // heightFactor:1 → 松高度下按内容收缩（Material 模式不会撑满全屏）
+        child: Align(
+          alignment: Alignment.center,
+          heightFactor: 1,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(2),
+            // 拖拽把手：玻璃弹层没有系统把手，需要自绘；Material 弹层已有，避免重复
+            if (glassEnabled) ...<Widget>[
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
+            ],
             Text(
               '添加错题',
               style: Theme.of(context)

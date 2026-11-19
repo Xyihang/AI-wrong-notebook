@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
-import 'package:smart_wrong_notebook/src/features/glass/glass_edge_fade.dart';
 import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 import 'package:smart_wrong_notebook/src/domain/models/subject.dart';
@@ -284,12 +283,6 @@ class _NotebookScreenState extends ConsumerState<NotebookScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('加载失败: $e')),
             ),
-                const Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: GlassEdgeFade(height: 44),
-                ),
               ],
             ),
           ),

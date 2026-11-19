@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
-import 'package:smart_wrong_notebook/src/features/glass/glass_edge_fade.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
 import 'package:smart_wrong_notebook/src/core/constants/app_config.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_appearance.dart';
@@ -21,9 +20,9 @@ class SettingsScreen extends ConsumerWidget {
     WidgetRef ref,
   ) async {
     final current = ref.read(glassAppearanceProvider);
-    final selected = await showModalBottomSheet<GlassAppearance>(
-      context: context,
-      showDragHandle: true,
+    // 统一弹层门面：玻璃开启时玻璃弹层，关闭时回退 Material
+    final selected = await showAppSheet<GlassAppearance>(
+      context,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -329,12 +328,6 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
-          const Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: GlassEdgeFade(height: 40),
-          ),
         ],
       ),
     );

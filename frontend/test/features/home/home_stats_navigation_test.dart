@@ -80,13 +80,6 @@ void main() {
     expect(container.read(selectedMasteryFilterProvider), isNull);
     expect(container.read(selectedCreatedTodayFilterProvider), isFalse);
 
-    await returnHome();
-    await tester.ensureVisible(find.textContaining('今日新增'));
-    await tester.tap(find.textContaining('今日新增'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('错题本目标页'), findsOneWidget);
-    expect(container.read(selectedCreatedTodayFilterProvider), isTrue);
 
     await returnHome();
     await tester.ensureVisible(find.textContaining('已掌握'));

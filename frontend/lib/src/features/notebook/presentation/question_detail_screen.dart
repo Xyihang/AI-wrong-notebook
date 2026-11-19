@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_edge_fade.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
@@ -96,7 +97,9 @@ class QuestionDetailScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: ListView(
+      body: Stack(
+        children: <Widget>[
+          ListView(
         padding: EdgeInsets.fromLTRB(
           24,
           24 + (glassEnabled ? glassTopInset(context) : 0),
@@ -556,6 +559,14 @@ class QuestionDetailScreen extends ConsumerWidget {
               onMarkMastered: () => _markResult(context, ref, current, true),
             ),
           ],
+        ],
+      ),
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: GlassEdgeFade(height: 40),
+          ),
         ],
       ),
     );

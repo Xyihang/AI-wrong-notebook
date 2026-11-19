@@ -90,7 +90,12 @@ class HomeScreen extends ConsumerWidget {
       appBar: glassTopBar(context, title: const Text('开始拍错题')),
       body: SafeArea(
       top: !glassEnabled,
-      child: ListView(
+      // 关闭 Material3 拉伸过滚动：拉伸会让玻璃折射错位、出现红黄色散条纹
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(
+          overscroll: false,
+        ),
+        child: ListView(
         padding: EdgeInsets.fromLTRB(
           24,
           20 + (glassEnabled ? glassTopInset(context) : 0),
@@ -201,8 +206,9 @@ class HomeScreen extends ConsumerWidget {
             error: (e, _) => Text('加载失败: $e'),
           ),
         ],
+        ),
+        ),
       ),
-    ),
     );
   }
 

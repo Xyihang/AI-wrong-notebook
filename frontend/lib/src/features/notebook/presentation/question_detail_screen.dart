@@ -4,7 +4,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smart_wrong_notebook/src/app/design/tokens.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/common/widgets/app_button.dart';
+import 'package:smart_wrong_notebook/src/common/widgets/app_card.dart';
+import 'package:smart_wrong_notebook/src/common/widgets/app_chip.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
@@ -42,16 +46,22 @@ class QuestionDetailScreen extends ConsumerWidget {
     if (current == null) {
       return Scaffold(
         appBar: glassTopBar(context, title: const Text('错题详情')),
-        body: const Center(child: Text('未找到该错题')),
+        body: Center(
+          child: Text(
+            '未找到该错题',
+            style: TextStyle(
+              fontSize: AppTokens.textSm,
+              color: context.tokens.textSecondary,
+            ),
+          ),
+        ),
       );
     }
 
+    final t = context.tokens;
     final result = current.analysisResult;
-    final masteryColor = _masteryColor(context, current.masteryLevel);
     final batchGroups = ref.watch(questionBatchGroupsProvider).valueOrNull;
     final batchGroup = batchGroups?[questionBatchRootId(current)];
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final glassEnabled = ref.watch(glassEnabledProvider);
 
     return Scaffold(
@@ -67,8 +77,14 @@ class QuestionDetailScreen extends ConsumerWidget {
         ),
         actions: <Widget>[
           IconButton(
-            icon: const Icon(CupertinoIcons.pencil),
-            onPressed: () => _editQuestion(context, ref, current),
+            tooltip: current.isFavorite ? '取消收藏' : '收藏',
+            icon: Icon(
+              current.isFavorite
+                  ? CupertinoIcons.bookmark_fill
+                  : CupertinoIcons.bookmark,
+              color: current.isFavorite ? t.primary : null,
+            ),
+            onPressed: () => _toggleFavorite(ref, current),
           ),
           // 更多：玻璃开启时用玻璃操作面板，关闭时保留 Material 菜单
           if (glassEnabled)
@@ -80,15 +96,48 @@ class QuestionDetailScreen extends ConsumerWidget {
             PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'delete') _confirmDelete(context, ref, current);
+                if (value == 'edit') _editQuestion(context, ref, current);
+                if (value == 'mastery') {
+                  _markResult(context, ref, current,
+                      current.masteryLevel != MasteryLevel.mastered);
+                }
               },
-              itemBuilder: (_) => [
-                const PopupMenuItem(
+              itemBuilder: (_) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'edit',
+                  child: Row(
+                    children: <Widget>[
+                      Icon(CupertinoIcons.pencil, color: t.primary, size: 20),
+                      const SizedBox(width: AppTokens.s2),
+                      const Text('编辑题目'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'mastery',
+                  child: Row(
+                    children: <Widget>[
+                      Icon(
+                        current.masteryLevel == MasteryLevel.mastered
+                            ? CupertinoIcons.arrow_counterclockwise
+                            : CupertinoIcons.check_mark_circled,
+                        color: t.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppTokens.s2),
+                      Text(current.masteryLevel == MasteryLevel.mastered
+                          ? '标记为仍需复习'
+                          : '标记为已掌握'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
                   value: 'delete',
                   child: Row(
-                    children: [
-                      Icon(CupertinoIcons.trash, color: Colors.red, size: 20),
-                      SizedBox(width: 8),
-                      Text('删除', style: TextStyle(color: Colors.red)),
+                    children: <Widget>[
+                      Icon(CupertinoIcons.trash, color: t.error, size: 20),
+                      const SizedBox(width: AppTokens.s2),
+                      Text('删除', style: TextStyle(color: t.error)),
                     ],
                   ),
                 ),
@@ -96,142 +145,17 @@ class QuestionDetailScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: Stack(
-        children: <Widget>[
-          ListView(
+      body: ListView(
         padding: EdgeInsets.fromLTRB(
-          24,
-          24 + (glassEnabled ? glassTopInset(context) : 0),
-          24,
-          24,
+          AppTokens.s6,
+          AppTokens.s4 + (glassEnabled ? glassTopInset(context) : 0),
+          AppTokens.s6,
+          AppTokens.s8,
         ),
         children: <Widget>[
-          // 统一标签分类框：科目 | AI识别 | 状态
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colorScheme.outlineVariant),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // 第一行：科目 + AI识别 + 状态
-                Row(
-                  children: <Widget>[
-                    _TagChip(
-                      label: current.subject.label,
-                      bgColor: const Color(0xFFEEF2FF),
-                      textColor: const Color(0xFF4F46E5),
-                    ),
-                    if (result?.subject != null) ...<Widget>[
-                      const SizedBox(width: 8),
-                      const _TagChip(
-                        label: 'AI识别',
-                        bgColor: Color(0xFFF0FDF4),
-                        textColor: Color(0xFF16A34A),
-                      ),
-                    ],
-                    const SizedBox(width: 8),
-                    _TagChip(
-                      label: _masteryLabel(current.masteryLevel),
-                      bgColor: masteryColor.withValues(alpha: 0.1),
-                      textColor: masteryColor,
-                    ),
-                    if (_batchLabel(current) != null) ...<Widget>[
-                      const SizedBox(width: 8),
-                      _TagChip(
-                        label: _batchLabel(current)!,
-                        bgColor: const Color(0xFFF8FAFC),
-                        textColor: const Color(0xFF64748B),
-                      ),
-                    ],
-                  ],
-                ),
-                // AI 短标签（橙色）
-                if (current.aiTags.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 10),
-                  Text('AI标签',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant)),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: current.aiTags
-                        .map((tag) => _TagChip(
-                              label: tag,
-                              bgColor: const Color(0xFFFFF7ED),
-                              textColor: const Color(0xFFD97706),
-                            ))
-                        .toList(),
-                  ),
-                ],
-                // 自定义标签（蓝色）
-                if (current.customTags.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 8),
-                  Text('自定义标签',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant)),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: current.customTags
-                        .map((t) => _TagChip(
-                              label: t,
-                              bgColor: const Color(0xFFEEF2FF),
-                              textColor: const Color(0xFF4F46E5),
-                            ))
-                        .toList(),
-                  ),
-                ],
-                // 添加标签按钮
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () => _showAddTagDialog(context, ref, current),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant
-                              .withValues(alpha: 0.5),
-                          style: BorderStyle.solid),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Icon(CupertinoIcons.plus,
-                            size: 14,
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant),
-                        const SizedBox(width: 4),
-                        Text('添加标签',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant)),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // 顶部同类题横幅：没有同类题（同批）时不显示
           if (batchGroup != null) ...<Widget>[
-            const SizedBox(height: 12),
-            _BatchSiblingCard(
+            _SimilarQuestionBanner(
               current: current,
               group: batchGroup,
               onSelect: (question) {
@@ -240,332 +164,69 @@ class QuestionDetailScreen extends ConsumerWidget {
                 context.push('/notebook/question/${question.id}');
               },
             ),
+            const SizedBox(height: AppTokens.s3),
           ],
-          if (result == null) ...<Widget>[
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: Theme.of(context).colorScheme.outlineVariant),
-              ),
-              child: Column(
-                children: <Widget>[
-                  Icon(CupertinoIcons.sparkles,
-                      size: 40,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurfaceVariant
-                          .withValues(alpha: 0.5)),
-                  const SizedBox(height: 12),
-                  const Text('暂无 AI 解析结果', style: TextStyle(fontSize: 15)),
-                  const SizedBox(height: 8),
-                  FilledButton.icon(
-                    onPressed: () {
-                      ref.read(currentQuestionProvider.notifier).state =
-                          current;
-                      context.go('/capture/correction');
-                    },
-                    icon: const Icon(CupertinoIcons.camera),
-                    label: const Text('去添加'),
-                  ),
-                ],
-              ),
+          // ① 题目
+          _QuestionSectionCard(
+            current: current,
+            onShowImage: () => _showFullImage(context, current.imagePath),
+          ),
+          const SizedBox(height: AppTokens.s3),
+          if (result == null)
+            _NoAnalysisCard(
+              onAdd: () {
+                ref.read(currentQuestionProvider.notifier).state = current;
+                context.go('/capture/correction');
+              },
+            )
+          else ...<Widget>[
+            // ② AI 解析（步骤条）
+            _AnalysisSectionCard(
+              result: result,
+              notice: _consistencyNotice(context, result),
             ),
-          ],
-          if (result != null) ...<Widget>[
-            const SizedBox(height: 16),
-            // 原题（包含图片和文本）
-            _InfoCard(
-              icon: CupertinoIcons.doc_text,
-              iconColor: const Color(0xFF6366F1),
-              bg: const Color(0xFFEEF2FF),
-              border: const Color(0xFFC7D2FE),
-              title: '原题',
-              titleColor: const Color(0xFF4338CA),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  // 图片预览
-                  if (current.imagePath.isNotEmpty)
-                    GestureDetector(
-                      onTap: () => _showFullImage(context, current.imagePath),
-                      child: Container(
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Stack(
-                          children: <Widget>[
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.file(
-                                File(current.imagePath),
-                                width: double.infinity,
-                                height: 120,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      Icon(CupertinoIcons.photo,
-                                          size: 30,
-                                          color: colorScheme.onSurfaceVariant),
-                                      const SizedBox(height: 4),
-                                      Text('图片加载失败',
-                                          style: TextStyle(
-                                              color:
-                                                  colorScheme.onSurfaceVariant,
-                                              fontSize: 11)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 6,
-                              right: 6,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.58),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    Icon(CupertinoIcons.zoom_in,
-                                        size: 12, color: Colors.white),
-                                    SizedBox(width: 3),
-                                    Text('查看原图',
-                                        style: TextStyle(
-                                            fontSize: 10, color: Colors.white)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  if (current.imagePath.isNotEmpty) const SizedBox(height: 10),
-                  MathContentView(
-                    current.correctedText,
-                    contentFormat: current.contentFormat,
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface,
-                        height: 1.5),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            // Answer
-            _InfoCard(
-              icon: result.visualAssumptionStatus ==
-                      VisualAssumptionStatus.needsReview
-                  ? CupertinoIcons.exclamationmark_triangle
-                  : CupertinoIcons.checkmark_circle,
-              iconColor: result.visualAssumptionStatus ==
-                      VisualAssumptionStatus.needsReview
-                  ? const Color(0xFFEA580C)
-                  : const Color(0xFF16A34A),
-              bg: result.visualAssumptionStatus ==
-                      VisualAssumptionStatus.needsReview
-                  ? const Color(0xFFFFF7ED)
-                  : const Color(0xFFF0FDF4),
-              border: result.visualAssumptionStatus ==
-                      VisualAssumptionStatus.needsReview
-                  ? const Color(0xFFFED7AA)
-                  : const Color(0xFFBBF7D0),
-              title: result.visualAssumptionStatus ==
-                      VisualAssumptionStatus.needsReview
-                  ? '可能解法'
-                  : '正确答案',
-              titleColor: result.visualAssumptionStatus ==
-                      VisualAssumptionStatus.needsReview
-                  ? const Color(0xFF9A3412)
-                  : const Color(0xFF166534),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  MathContentView(
-                    result.finalAnswer,
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? colorScheme.onSurface
-                            : const Color(0xFF15803D),
-                        fontWeight: FontWeight.w600),
-                  ),
-                  if (_consistencyNotice(result) != null) ...<Widget>[
-                    const SizedBox(height: 10),
-                    _ConsistencyNotice(
-                      notice: _consistencyNotice(result)!,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            // Mistake reason
-            _InfoCard(
-              icon: CupertinoIcons.exclamationmark_triangle,
-              iconColor: const Color(0xFFEA580C),
-              bg: const Color(0xFFFFF7ED),
-              border: const Color(0xFFFED7AA),
-              title: '错因分析',
-              titleColor: const Color(0xFF9A3412),
-              child: MathContentView(
-                result.mistakeReason,
-                style: TextStyle(
-                    fontSize: 14,
-                    color: isDark
-                        ? colorScheme.onSurface
-                        : const Color(0xFFC2410C),
-                    height: 1.5),
-              ),
-            ),
-            const SizedBox(height: 10),
-            // Study advice
-            _InfoCard(
-              icon: CupertinoIcons.lightbulb,
-              iconColor: const Color(0xFFD97706),
-              bg: const Color(0xFFFFFBEB),
-              border: const Color(0xFFFDE68A),
-              title: '学习建议',
-              titleColor: const Color(0xFF92400E),
-              child: MathContentView(
-                result.studyAdvice,
-                style: TextStyle(
-                    fontSize: 14,
-                    color: isDark
-                        ? colorScheme.onSurface
-                        : const Color(0xFFB45309),
-                    height: 1.5),
-              ),
-            ),
-            // Knowledge points
-            if (result.knowledgePoints.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 16),
-              Text('知识点',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: result.knowledgePoints
-                    .map((p) => Container(
-                          margin: const EdgeInsets.only(bottom: 6),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? colorScheme.surface
-                                : const Color(0xFFEEF2FF),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: isDark
-                                  ? colorScheme.outlineVariant
-                                  : const Color(0xFFC7D2FE),
-                            ),
-                          ),
-                          child: MathContentView(
-                            p,
-                            style: TextStyle(
-                                fontSize: 12,
-                                height: 1.45,
-                                color: isDark
-                                    ? colorScheme.onSurface
-                                    : const Color(0xFF4F46E5)),
-                          ),
-                        ))
-                    .toList(),
-              ),
-            ],
-            // Steps
-            if (result.steps.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 16),
-              Text('解题步骤',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 10),
-              ...result.steps.asMap().entries.map((e) => Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? colorScheme.surface
-                          : const Color(0xFFFAFAFF),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark
-                            ? colorScheme.outlineVariant
-                            : const Color(0xFFE0E7FF),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? colorScheme.primary.withValues(alpha: 0.14)
-                                : const Color(0xFFEEF2FF),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                              child: Text('${e.key + 1}',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark
-                                          ? colorScheme.primary
-                                          : const Color(0xFF4F46E5)))),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                            child: MathContentView(e.value,
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    color: colorScheme.onSurface,
-                                    height: 1.5))),
-                      ],
-                    ),
-                  )),
-            ],
-            const SizedBox(height: 24),
-            _AskAiCard(current: current),
-            const SizedBox(height: 16),
-            _PracticeSummaryCard(current: current),
-            const SizedBox(height: 16),
-            _MasteryActions(
+            const SizedBox(height: AppTokens.s3),
+            // ③ 我的错因
+            _MistakeReasonCard(
               current: current,
-              onMarkReviewing: () => _markResult(context, ref, current, false),
-              onMarkMastered: () => _markResult(context, ref, current, true),
+              result: result,
+              onAddTag: () => _showAddTagDialog(context, ref, current),
             ),
+            const SizedBox(height: AppTokens.s4),
+            // 底部双按钮：编辑笔记 / 加入复习
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: AppButton(
+                    label: '编辑笔记',
+                    kind: AppButtonKind.outline,
+                    icon: CupertinoIcons.pencil,
+                    onPressed: () => _editQuestion(context, ref, current),
+                  ),
+                ),
+                const SizedBox(width: AppTokens.s3),
+                Expanded(
+                  child: AppButton(
+                    label: '加入复习',
+                    icon: CupertinoIcons.arrow_counterclockwise,
+                    onPressed: () => _markResult(context, ref, current, false),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTokens.s6),
+            _AskAiCard(current: current),
+            const SizedBox(height: AppTokens.s4),
+            _PracticeSummaryCard(current: current),
           ],
-        ],
-      ),
         ],
       ),
     );
   }
 
-  _ConsistencyNoticeData? _consistencyNotice(AnalysisResult result) {
+  _ConsistencyNoticeData? _consistencyNotice(
+      BuildContext context, AnalysisResult result) {
+    final t = context.tokens;
     switch (result.consistencyStatus) {
       case AnalysisConsistencyStatus.repaired:
         if (result.visualAssumptionStatus ==
@@ -575,15 +236,15 @@ class QuestionDetailScreen extends ConsumerWidget {
                 ? result.consistencyNote
                 : 'AI 已复核答案；图中关键标注含义仍需核对',
             icon: CupertinoIcons.exclamationmark_triangle,
-            color: const Color(0xFFEA580C),
-            background: const Color(0xFFFFF7ED),
+            color: t.warning,
+            background: t.warningSoft,
           );
         }
-        return const _ConsistencyNoticeData(
+        return _ConsistencyNoticeData(
           text: 'AI 已复核并修正答案',
           icon: CupertinoIcons.checkmark_shield,
-          color: Color(0xFF16A34A),
-          background: Color(0xFFEFFDF5),
+          color: t.success,
+          background: t.successSoft,
         );
       case AnalysisConsistencyStatus.needsReview:
         if (result.visualAssumptionStatus ==
@@ -593,15 +254,15 @@ class QuestionDetailScreen extends ConsumerWidget {
                 ? result.consistencyNote
                 : '图中关键标注含义需核对，当前为可能解法',
             icon: CupertinoIcons.exclamationmark_triangle,
-            color: const Color(0xFFEA580C),
-            background: const Color(0xFFFFF7ED),
+            color: t.warning,
+            background: t.warningSoft,
           );
         }
-        return const _ConsistencyNoticeData(
+        return _ConsistencyNoticeData(
           text: '答案与步骤可能不一致，请核对',
           icon: CupertinoIcons.exclamationmark_triangle,
-          color: Color(0xFFEA580C),
-          background: Color(0xFFFFF7ED),
+          color: t.warning,
+          background: t.warningSoft,
         );
       case AnalysisConsistencyStatus.unchecked:
       case AnalysisConsistencyStatus.consistent:
@@ -610,35 +271,12 @@ class QuestionDetailScreen extends ConsumerWidget {
     }
   }
 
-  String _masteryLabel(MasteryLevel level) {
-    switch (level) {
-      case MasteryLevel.newQuestion:
-        return '待复习';
-      case MasteryLevel.reviewing:
-        return '待复习';
-      case MasteryLevel.mastered:
-        return '已掌握';
-    }
-  }
-
-  Color _masteryColor(BuildContext context, MasteryLevel level) {
-    final colorScheme = Theme.of(context).colorScheme;
-    switch (level) {
-      case MasteryLevel.newQuestion:
-        return colorScheme.onSurfaceVariant;
-      case MasteryLevel.reviewing:
-        return const Color(0xFFD97706);
-      case MasteryLevel.mastered:
-        return const Color(0xFF16A34A);
-    }
-  }
-
-  String? _batchLabel(QuestionRecord question) {
-    if (question.parentQuestionId == null && question.rootQuestionId == null) {
-      return null;
-    }
-    final order = question.splitOrder;
-    return order == null ? '拍照批次' : '拍照批次 · 第 $order 题';
+  /// 收藏 / 取消收藏：沿用现有仓库更新路径，不改动业务流向。
+  Future<void> _toggleFavorite(WidgetRef ref, QuestionRecord question) async {
+    final updated = question.copyWith(isFavorite: !question.isFavorite);
+    await ref.read(questionRepositoryProvider).update(updated);
+    ref.read(currentQuestionProvider.notifier).state = updated;
+    invalidateQuestionList(ref);
   }
 
   void _editQuestion(
@@ -671,15 +309,17 @@ class QuestionDetailScreen extends ConsumerWidget {
     );
   }
 
-  /// 玻璃操作面板（详情页「更多」）：删除等操作。
+  /// 玻璃操作面板（详情页「更多」）：掌握状态 + 删除。
   Future<void> _showGlassActions(
       BuildContext context, WidgetRef ref, QuestionRecord question) async {
-    final scheme = Theme.of(context).colorScheme;
+    final t = context.tokens;
+    final mastered = question.masteryLevel == MasteryLevel.mastered;
     await showAppSheet<void>(
       context,
       bottomInset: 20,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+        padding: const EdgeInsets.fromLTRB(
+            AppTokens.s6, AppTokens.s4, AppTokens.s6, AppTokens.s6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -687,16 +327,46 @@ class QuestionDetailScreen extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.35),
+                color: t.textTertiary.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTokens.s4),
             ListTile(
-              leading: const Icon(CupertinoIcons.trash, color: Colors.red),
-              title: const Text('删除',
-                  style: TextStyle(
-                      color: Colors.red, fontWeight: FontWeight.w500)),
+              leading: Icon(CupertinoIcons.pencil, color: t.primary),
+              title: Text(
+                '编辑题目',
+                style: TextStyle(
+                    color: t.textPrimary, fontWeight: FontWeight.w500),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _editQuestion(context, ref, question);
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                mastered
+                    ? CupertinoIcons.arrow_counterclockwise
+                    : CupertinoIcons.check_mark_circled,
+                color: t.primary,
+              ),
+              title: Text(
+                mastered ? '标记为仍需复习' : '标记为已掌握',
+                style: TextStyle(
+                    color: t.textPrimary, fontWeight: FontWeight.w500),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                _markResult(context, ref, question, !mastered);
+              },
+            ),
+            ListTile(
+              leading: Icon(CupertinoIcons.trash, color: t.error),
+              title: Text(
+                '删除',
+                style: TextStyle(color: t.error, fontWeight: FontWeight.w500),
+              ),
               onTap: () {
                 Navigator.pop(ctx);
                 _confirmDelete(context, ref, question);
@@ -725,6 +395,7 @@ class QuestionDetailScreen extends ConsumerWidget {
 
   void _showAddTagDialog(
       BuildContext context, WidgetRef ref, QuestionRecord question) {
+    final t = context.tokens;
     final controller = TextEditingController();
     showAppDialog<void>(context,
       builder: (ctx) => AlertDialog(
@@ -741,22 +412,20 @@ class QuestionDetailScreen extends ConsumerWidget {
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppTokens.s3),
             Text('已有标签',
                 style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
-            const SizedBox(height: 4),
+                    fontSize: AppTokens.textXs, color: t.textSecondary)),
+            const SizedBox(height: AppTokens.s1),
             Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                ...question.aiTags
-                    .map((tag) => _dialogTagChip(tag, Colors.orange)),
+              spacing: AppTokens.s1,
+              runSpacing: AppTokens.s1,
+              children: <Widget>[
+                ...question.aiTags.map((tag) => _dialogTagChip(tag, t.warning)),
                 ...question.aiKnowledgePoints
-                    .map((kp) => _dialogTagChip(kp, Colors.orange)),
+                    .map((kp) => _dialogTagChip(kp, t.warning)),
                 ...question.customTags
-                    .map((t) => _dialogTagChip(t, Colors.indigo)),
+                    .map((tag) => _dialogTagChip(tag, t.primary)),
               ],
             ),
           ],
@@ -798,12 +467,14 @@ class QuestionDetailScreen extends ConsumerWidget {
 
   Widget _dialogTagChip(String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.s2, vertical: AppTokens.s1),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppTokens.radiusSm),
       ),
-      child: Text(label, style: TextStyle(fontSize: 12, color: color)),
+      child: Text(label,
+          style: TextStyle(fontSize: AppTokens.textXs, color: color)),
     );
   }
 
@@ -1004,14 +675,15 @@ class _AskAiCardState extends ConsumerState<_AskAiCard> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const accent = Color(0xFF0F766E);
+    final t = context.tokens;
+    final accent = t.secondary;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outlineVariant),
+        color: t.card,
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        border: Border.all(color: t.cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1025,7 +697,7 @@ class _AskAiCardState extends ConsumerState<_AskAiCard> {
                   color: accent.withValues(alpha: isDark ? 0.18 : 0.1),
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: const Icon(CupertinoIcons.chat_bubble_2,
+                child: Icon(CupertinoIcons.chat_bubble_2,
                     size: 16, color: accent),
               ),
               const SizedBox(width: 10),
@@ -1135,15 +807,13 @@ class _AskAiMessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUser = message.role == 'user';
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = context.tokens;
     final bg = isUser
-        ? colorScheme.primary.withValues(alpha: isDark ? 0.18 : 0.1)
-        : isDark
-            ? colorScheme.surface
-            : const Color(0xFFF8FAFC);
+        ? colorScheme.primary.withValues(alpha: t.isDark ? 0.18 : 0.1)
+        : t.formulaBg;
     final borderColor = isUser
         ? colorScheme.primary.withValues(alpha: 0.22)
-        : colorScheme.outlineVariant;
+        : t.cardBorder;
     final align = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
     return Column(
@@ -1549,48 +1219,6 @@ class _AskAiInlineText extends StatelessWidget {
   }
 }
 
-class _MasteryActions extends StatelessWidget {
-  const _MasteryActions({
-    required this.current,
-    required this.onMarkReviewing,
-    required this.onMarkMastered,
-  });
-
-  final QuestionRecord current;
-  final VoidCallback onMarkReviewing;
-  final VoidCallback onMarkMastered;
-
-  @override
-  Widget build(BuildContext context) {
-    if (current.masteryLevel == MasteryLevel.mastered) {
-      return SizedBox(
-        width: double.infinity,
-        child: OutlinedButton(
-          onPressed: onMarkReviewing,
-          child: const Text('仍需复习'),
-        ),
-      );
-    }
-
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: OutlinedButton(
-            onPressed: onMarkReviewing,
-            child: const Text('仍需复习'),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: FilledButton(
-            onPressed: onMarkMastered,
-            child: const Text('已掌握'),
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _PracticeSummaryCard extends ConsumerStatefulWidget {
   const _PracticeSummaryCard({required this.current});
@@ -1743,14 +1371,14 @@ class _PracticeSummaryCardState extends ConsumerState<_PracticeSummaryCard> {
     final totalCount = latestRound.isNotEmpty
         ? latestRound.length
         : current.savedExercises.length;
-    const accent = Color(0xFF6366F1);
+    final accent = context.tokens.primary;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outlineVariant),
+        color: context.tokens.card,
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        border: Border.all(color: context.tokens.cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1764,7 +1392,7 @@ class _PracticeSummaryCardState extends ConsumerState<_PracticeSummaryCard> {
                   color: accent.withValues(alpha: isDark ? 0.16 : 0.1),
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: const Icon(CupertinoIcons.arrow_2_circlepath,
+                child: Icon(CupertinoIcons.arrow_2_circlepath,
                     size: 16, color: accent),
               ),
               const SizedBox(width: 10),
@@ -1816,7 +1444,7 @@ class _PracticeSummaryCardState extends ConsumerState<_PracticeSummaryCard> {
                   icon: CupertinoIcons.check_mark_circled,
                   label: '$answeredCount 已答',
                   color: answeredCount == totalCount
-                      ? const Color(0xFF059669)
+                      ? context.tokens.success
                       : colorScheme.onSurfaceVariant,
                 ),
               ],
@@ -1951,7 +1579,7 @@ class _PracticeInlineStatus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final color = isError ? colorScheme.error : const Color(0xFF6366F1);
+    final color = isError ? colorScheme.error : context.tokens.primary;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1997,69 +1625,6 @@ class _PracticeInlineStatus extends StatelessWidget {
   }
 }
 
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({
-    required this.icon,
-    required this.iconColor,
-    required this.bg,
-    required this.border,
-    required this.title,
-    required this.titleColor,
-    this.child,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final Color bg;
-  final Color border;
-  final String title;
-  final Color titleColor;
-  final Widget? child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? colorScheme.surface : bg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? iconColor.withValues(alpha: 0.28) : border,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color:
-                      isDark ? iconColor.withValues(alpha: 0.16) : Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, size: 15, color: iconColor),
-              ),
-              const SizedBox(width: 8),
-              Text(title,
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? colorScheme.onSurface : titleColor)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (child != null) child! else const SizedBox.shrink(),
-        ],
-      ),
-    );
-  }
-}
 
 class _ConsistencyNoticeData {
   const _ConsistencyNoticeData({
@@ -2115,9 +1680,78 @@ class _ConsistencyNotice extends StatelessWidget {
   }
 }
 
-class _BatchSiblingCard extends StatelessWidget {
-  const _BatchSiblingCard(
-      {required this.current, required this.group, required this.onSelect});
+
+// ───────────────────────────── 详情页分区组件 ─────────────────────────────
+
+String _masteryLabel(MasteryLevel level) {
+  switch (level) {
+    case MasteryLevel.newQuestion:
+      return '待复习';
+    case MasteryLevel.reviewing:
+      return '待复习';
+    case MasteryLevel.mastered:
+      return '已掌握';
+  }
+}
+
+Color _masteryColor(BuildContext context, MasteryLevel level) {
+  final t = context.tokens;
+  switch (level) {
+    case MasteryLevel.newQuestion:
+      return t.textSecondary;
+    case MasteryLevel.reviewing:
+      return t.warning;
+    case MasteryLevel.mastered:
+      return t.success;
+  }
+}
+
+Color _masterySoft(BuildContext context, MasteryLevel level) {
+  final t = context.tokens;
+  switch (level) {
+    case MasteryLevel.newQuestion:
+      return t.formulaBg;
+    case MasteryLevel.reviewing:
+      return t.warningSoft;
+    case MasteryLevel.mastered:
+      return t.successSoft;
+  }
+}
+
+String _recordedDate(DateTime date) => '${date.month}月${date.day}日';
+
+/// 把解析拆成步骤：优先用 AI 给出的步骤，否则把推导文本按行 / 句号切分（最多 6 步）。
+List<String> _analysisSteps(AnalysisResult result) {
+  final steps = result.steps
+      .map((step) => step.trim())
+      .where((step) => step.isNotEmpty)
+      .toList();
+  if (steps.isNotEmpty) return steps.take(6).toList();
+  final derivation = result.finalAnswerDerivation.trim();
+  if (derivation.isEmpty) return const <String>[];
+  var parts = derivation
+      .split('\n')
+      .map((part) => part.trim())
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.length <= 1) {
+    parts = derivation
+        .split(RegExp(r'[。；;]'))
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+  }
+  return parts.take(6).toList();
+}
+
+/// 顶部同类题横幅（demo `.similar-banner`）：secondarySoft 底 + 1px 描边，
+/// 同时保留同批题目的快速跳转。
+class _SimilarQuestionBanner extends StatelessWidget {
+  const _SimilarQuestionBanner({
+    required this.current,
+    required this.group,
+    required this.onSelect,
+  });
 
   final QuestionRecord current;
   final QuestionBatchGroup group;
@@ -2125,61 +1759,78 @@ class _BatchSiblingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
+    final t = context.tokens;
+    final others = group.questions.length - 1;
+    final knowledgePoint = current.aiKnowledgePoints.isNotEmpty
+        ? current.aiKnowledgePoints.first
+        : null;
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppTokens.s3),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outlineVariant),
+        color: t.secondarySoft,
+        borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+        border: Border.all(color: t.secondary.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Icon(CupertinoIcons.square_grid_2x2,
-                  size: 16, color: colorScheme.onSurfaceVariant),
-              const SizedBox(width: 6),
-              Text('同批题目',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurfaceVariant)),
-              const SizedBox(width: 6),
-              Text('${group.questions.length} 题',
-                  style: TextStyle(
-                      fontSize: 12, color: colorScheme.onSurfaceVariant)),
+              Icon(CupertinoIcons.sparkles, size: 20, color: t.secondary),
+              const SizedBox(width: AppTokens.s3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      '找到 $others 道同类错题',
+                      style: TextStyle(
+                        fontSize: AppTokens.textSm,
+                        fontWeight: FontWeight.w600,
+                        color: t.secondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      knowledgePoint == null
+                          ? '来自同一次拍照收录'
+                          : '考查点：$knowledgePoint',
+                      style: TextStyle(
+                        fontSize: AppTokens.textXs,
+                        height: 1.4,
+                        color: t.isDark ? t.textSecondary : t.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppTokens.s2),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppTokens.s2,
+            runSpacing: AppTokens.s1,
             children: group.questions.map((question) {
               final selected = question.id == current.id;
               return GestureDetector(
                 onTap: selected ? null : () => onSelect(question),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppTokens.s3, vertical: AppTokens.s1),
                   decoration: BoxDecoration(
-                    color: selected ? colorScheme.primary : colorScheme.surface,
-                    borderRadius: BorderRadius.circular(16),
+                    color: selected ? t.primary : t.card,
+                    borderRadius: BorderRadius.circular(999),
                     border: Border.all(
-                        color: selected
-                            ? colorScheme.primary
-                            : colorScheme.outlineVariant),
+                        color: selected ? t.primary : t.cardBorder),
                   ),
                   child: Text(
                     _siblingLabel(question),
                     style: TextStyle(
-                        fontSize: 12,
-                        color: selected
-                            ? colorScheme.onPrimary
-                            : colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500),
+                      fontSize: AppTokens.textXs,
+                      fontWeight: selected ? FontWeight.w500 : null,
+                      color: selected ? t.onPrimary : t.textSecondary,
+                    ),
                   ),
                 ),
               );
@@ -2196,35 +1847,496 @@ class _BatchSiblingCard extends StatelessWidget {
   }
 }
 
-class _TagChip extends StatelessWidget {
-  const _TagChip(
-      {required this.label, required this.bgColor, required this.textColor});
+/// ① 题目卡：科目 / 掌握状态 / 收录日期 + 原图 + 题干 + 公式块 + AI 标签。
+class _QuestionSectionCard extends StatelessWidget {
+  const _QuestionSectionCard({
+    required this.current,
+    required this.onShowImage,
+  });
 
-  final String label;
-  final Color bgColor;
-  final Color textColor;
+  final QuestionRecord current;
+  final VoidCallback onShowImage;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isDark ? textColor.withValues(alpha: 0.14) : bgColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isDark
-              ? textColor.withValues(alpha: 0.24)
-              : colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
+    final t = context.tokens;
+    final result = current.analysisResult;
+    final formula = _displayFormula(current.correctedText);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              AppTag(
+                current.subject.label,
+                color: t.subjectColor(current.subject.label),
+                background: t.subjectSoft(current.subject.label),
+                fontWeight: FontWeight.w600,
+              ),
+              if (result?.subject != null) ...<Widget>[
+                const SizedBox(width: AppTokens.s2),
+                AppTag(
+                  'AI识别',
+                  color: t.success,
+                  background: t.successSoft,
+                  fontWeight: FontWeight.w500,
+                ),
+              ],
+              const SizedBox(width: AppTokens.s2),
+              AppTag(
+                _masteryLabel(current.masteryLevel),
+                color: _masteryColor(context, current.masteryLevel),
+                background: _masterySoft(context, current.masteryLevel),
+                fontWeight: FontWeight.w500,
+              ),
+              const Spacer(),
+              Text(
+                '收录于 ${_recordedDate(current.createdAt)}',
+                style: TextStyle(
+                    fontSize: AppTokens.textXs, color: t.textTertiary),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTokens.s3),
+          const AppSectionLabel('题目'),
+          if (current.imagePath.isNotEmpty) ...<Widget>[
+            GestureDetector(
+              onTap: onShowImage,
+              child: Container(
+                height: 120,
+                decoration: BoxDecoration(
+                  color: t.formulaBg,
+                  borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                ),
+                child: Stack(
+                  children: <Widget>[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                      child: Image.file(
+                        File(current.imagePath),
+                        width: double.infinity,
+                        height: 120,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Icon(CupertinoIcons.photo,
+                                  size: 30, color: t.textTertiary),
+                              const SizedBox(height: AppTokens.s1),
+                              Text('图片加载失败',
+                                  style: TextStyle(
+                                      fontSize: AppTokens.textXs,
+                                      color: t.textTertiary)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.58),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(CupertinoIcons.zoom_in,
+                                size: 12, color: Colors.white),
+                            SizedBox(width: 3),
+                            Text('查看原图',
+                                style: TextStyle(
+                                    fontSize: 10, color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppTokens.s3),
+          ],
+          MathContentView(
+            current.correctedText,
+            contentFormat: current.contentFormat,
+            style: TextStyle(
+              fontSize: AppTokens.textSm,
+              height: 1.6,
+              color: t.textPrimary,
+            ),
+          ),
+          if (formula != null) ...<Widget>[
+            const SizedBox(height: AppTokens.s2),
+            _FormulaBlock(formula: formula),
+          ],
+          if (current.aiTags.isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppTokens.s3),
+            Wrap(
+              spacing: AppTokens.s2,
+              runSpacing: AppTokens.s1,
+              children: current.aiTags
+                  .take(5)
+                  .map((tag) => AppTag(tag,
+                      color: t.warning,
+                      background: t.warningSoft,
+                      fontWeight: FontWeight.w500))
+                  .toList(),
+            ),
+          ],
+        ],
       ),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: 12,
-              color: isDark ? colorScheme.onSurface : textColor,
-              fontWeight: FontWeight.w500)),
     );
   }
+}
+
+/// ② AI 解析卡：正确答案（含一致性提示）+ 步骤条 + 学习建议。
+class _AnalysisSectionCard extends StatelessWidget {
+  const _AnalysisSectionCard({required this.result, required this.notice});
+
+  final AnalysisResult result;
+  final _ConsistencyNoticeData? notice;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final needsReview =
+        result.visualAssumptionStatus == VisualAssumptionStatus.needsReview;
+    final answerColor = needsReview ? t.warning : t.success;
+    final answerSoft = needsReview ? t.warningSoft : t.successSoft;
+    final steps = _analysisSteps(result);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const AppSectionLabel('AI 解析'),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppTokens.s3),
+            decoration: BoxDecoration(
+              color: answerSoft,
+              borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Icon(
+                      needsReview
+                          ? CupertinoIcons.exclamationmark_triangle
+                          : CupertinoIcons.checkmark_circle,
+                      size: 14,
+                      color: answerColor,
+                    ),
+                    const SizedBox(width: AppTokens.s1),
+                    Text(
+                      needsReview ? '可能解法' : '正确答案',
+                      style: TextStyle(
+                        fontSize: AppTokens.textXs,
+                        fontWeight: FontWeight.w600,
+                        color: answerColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppTokens.s2),
+                MathContentView(
+                  result.finalAnswer,
+                  style: TextStyle(
+                    fontSize: AppTokens.textSm,
+                    height: 1.5,
+                    fontWeight: FontWeight.w600,
+                    color: answerColor,
+                  ),
+                ),
+                if (notice != null) ...<Widget>[
+                  const SizedBox(height: AppTokens.s2),
+                  _ConsistencyNotice(notice: notice!),
+                ],
+              ],
+            ),
+          ),
+          if (steps.isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppTokens.s3),
+            ...steps.asMap().entries.map(
+                  (entry) => _AnalysisStepTile(
+                    index: entry.key + 1,
+                    text: entry.value,
+                  ),
+                ),
+          ],
+          if (result.studyAdvice.trim().isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppTokens.s2),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppTokens.s3),
+              decoration: BoxDecoration(
+                color: t.formulaBg,
+                borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Icon(CupertinoIcons.lightbulb,
+                          size: 14, color: t.warning),
+                      const SizedBox(width: AppTokens.s1),
+                      Text(
+                        '学习建议',
+                        style: TextStyle(
+                          fontSize: AppTokens.textXs,
+                          fontWeight: FontWeight.w600,
+                          color: t.warning,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppTokens.s1),
+                  MathContentView(
+                    result.studyAdvice,
+                    style: TextStyle(
+                      fontSize: AppTokens.textSm,
+                      height: 1.6,
+                      color: t.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 解析步骤（demo `.analysis-step`）：20×20 圆形序号 + 正文。
+class _AnalysisStepTile extends StatelessWidget {
+  const _AnalysisStepTile({required this.index, required this.text});
+
+  final int index;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTokens.s2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: 20,
+            height: 20,
+            margin: const EdgeInsets.only(top: 2),
+            alignment: Alignment.center,
+            decoration:
+                BoxDecoration(color: t.primarySoft, shape: BoxShape.circle),
+            child: Text(
+              '$index',
+              style: TextStyle(
+                fontSize: AppTokens.textXs,
+                height: 1,
+                fontWeight: FontWeight.w600,
+                color: t.primary,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppTokens.s3),
+          Expanded(
+            child: MathContentView(
+              text,
+              style: TextStyle(
+                fontSize: AppTokens.textSm,
+                height: 1.6,
+                color: t.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 暂无解析时的占位卡（保留原有「去添加」入口）。
+class _NoAnalysisCard extends StatelessWidget {
+  const _NoAnalysisCard({required this.onAdd});
+
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return AppCard(
+      padding: const EdgeInsets.all(AppTokens.s6),
+      child: Column(
+        children: <Widget>[
+          Icon(CupertinoIcons.sparkles, size: 40, color: t.textTertiary),
+          const SizedBox(height: AppTokens.s3),
+          Text(
+            '暂无 AI 解析结果',
+            style:
+                TextStyle(fontSize: AppTokens.textBase, color: t.textPrimary),
+          ),
+          const SizedBox(height: AppTokens.s2),
+          Text(
+            '可以补拍或补充题目内容后重新解析',
+            style: TextStyle(fontSize: AppTokens.textXs, color: t.textTertiary),
+          ),
+          const SizedBox(height: AppTokens.s4),
+          AppButton(
+            label: '去添加',
+            icon: CupertinoIcons.camera,
+            expand: false,
+            onPressed: onAdd,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ③ 我的错因卡：error 色正文 + 知识点 / 自定义标签 + 添加标签入口。
+class _MistakeReasonCard extends StatelessWidget {
+  const _MistakeReasonCard({
+    required this.current,
+    required this.result,
+    required this.onAddTag,
+  });
+
+  final QuestionRecord current;
+  final AnalysisResult result;
+  final VoidCallback onAddTag;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final reason = result.mistakeReason.trim();
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const AppSectionLabel('我的错因'),
+          if (reason.isEmpty)
+            Text(
+              '暂未记录错因，可以补充标签方便后面复习。',
+              style:
+                  TextStyle(fontSize: AppTokens.textSm, color: t.textTertiary),
+            )
+          else
+            MathContentView(
+              reason,
+              style: TextStyle(
+                fontSize: AppTokens.textSm,
+                height: 1.6,
+                color: t.error,
+              ),
+            ),
+          if (result.knowledgePoints.isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppTokens.s3),
+            Wrap(
+              spacing: AppTokens.s2,
+              runSpacing: AppTokens.s1,
+              children: result.knowledgePoints
+                  .map((point) => AppTag(point,
+                      color: t.primary,
+                      background: t.primarySoft,
+                      fontWeight: FontWeight.w500))
+                  .toList(),
+            ),
+          ],
+          if (current.customTags.isNotEmpty) ...<Widget>[
+            const SizedBox(height: AppTokens.s2),
+            Wrap(
+              spacing: AppTokens.s2,
+              runSpacing: AppTokens.s1,
+              children:
+                  current.customTags.map((tag) => AppTag(tag)).toList(),
+            ),
+          ],
+          const SizedBox(height: AppTokens.s3),
+          GestureDetector(
+            onTap: onAddTag,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppTokens.s3, vertical: AppTokens.s1),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppTokens.radiusMd),
+                border: Border.all(color: t.cardBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(CupertinoIcons.plus, size: 14, color: t.textSecondary),
+                  const SizedBox(width: AppTokens.s1),
+                  Text(
+                    '添加标签',
+                    style: TextStyle(
+                        fontSize: AppTokens.textXs, color: t.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 公式块（demo `.q-formula`）：serif 斜体 + 中立底色。
+class _FormulaBlock extends StatelessWidget {
+  const _FormulaBlock({required this.formula});
+
+  final String formula;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.s3, vertical: AppTokens.s2),
+      decoration: BoxDecoration(
+        color: t.formulaBg,
+        borderRadius: BorderRadius.circular(AppTokens.radiusSm),
+      ),
+      child: Center(
+        child: MathContentView(
+          '\$\$$formula\$\$',
+          style: TextStyle(
+            fontSize: AppTokens.textSm,
+            fontStyle: FontStyle.italic,
+            fontFamily: 'serif',
+            fontFamilyFallback: const <String>['Times New Roman', 'serif'],
+            color: t.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 题干里的第一个公式（`$$…$$` / `\[…\]` / `\(…\)` / `$…$`），没有则返回 null。
+String? _displayFormula(String raw) {
+  final patterns = <RegExp>[
+    RegExp(r'\$\$([\s\S]*?)\$\$'),
+    RegExp(r'\\\[([\s\S]*?)\\\]'),
+    RegExp(r'\\\(([\s\S]*?)\\\)'),
+    RegExp(r'(?<!\\)\$([^\$]+)\$'),
+  ];
+  for (final pattern in patterns) {
+    final found = pattern.firstMatch(raw)?.group(1)?.trim();
+    if (found != null && found.isNotEmpty) return found;
+  }
+  return null;
 }

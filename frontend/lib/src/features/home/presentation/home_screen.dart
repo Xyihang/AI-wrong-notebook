@@ -2,20 +2,23 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:smart_wrong_notebook/src/app/providers.dart';
-import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
-import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
-import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
-import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
-import 'package:smart_wrong_notebook/src/common/widgets/stats_chart.dart';
+import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
+import 'package:smart_wrong_notebook/src/app/design/tokens.dart';
+import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/common/widgets/app_card.dart';
+import 'package:smart_wrong_notebook/src/common/widgets/app_chip.dart';
+import 'package:smart_wrong_notebook/src/common/widgets/app_stat_card.dart';
 import 'package:smart_wrong_notebook/src/data/services/question_analysis_coordinator.dart';
 import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
+import 'package:smart_wrong_notebook/src/features/achievements/presentation/achievement_celebration.dart';
 import 'package:smart_wrong_notebook/src/features/capture/presentation/capture_entry_sheet.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/features/home/presentation/background_analysis_section.dart';
 import 'package:smart_wrong_notebook/src/features/home/presentation/vision_quota_card.dart';
-import 'package:smart_wrong_notebook/src/features/achievements/presentation/achievement_celebration.dart';
 import 'package:smart_wrong_notebook/src/shared/widgets/math_content_view.dart';
 
 /// 本会话已弹过「恭喜」的徽章 id（避免同一次解锁重复弹出）。
@@ -89,126 +92,130 @@ class HomeScreen extends ConsumerWidget {
       extendBodyBehindAppBar: glassEnabled,
       appBar: glassTopBar(context, title: const Text('开始拍错题')),
       body: SafeArea(
-      top: !glassEnabled,
-      // 关闭 Material3 拉伸过滚动：拉伸会让玻璃折射错位、出现红黄色散条纹
-      child: ScrollConfiguration(
-        behavior: ScrollConfiguration.of(context).copyWith(
-          overscroll: false,
-        ),
-        child: ListView(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          20 + (glassEnabled ? glassTopInset(context) : 0),
-          24,
-          24,
-        ),
-        children: <Widget>[
-          if (isGuest) ...<Widget>[
-            _GuestBanner(
-              onLogin: () async {
-                await ref.read(authControllerProvider.notifier).logout();
-                if (context.mounted) context.go('/login');
-              },
+        top: !glassEnabled,
+        // 关闭 Material3 拉伸过滚动：拉伸会让玻璃折射错位、出现红黄色散条纹
+        child: ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(
+            overscroll: false,
+          ),
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(
+              AppTokens.s4,
+              AppTokens.s4 + AppTokens.s1 +
+                  (glassEnabled ? glassTopInset(context) : 0),
+              AppTokens.s4,
+              AppTokens.s6,
             ),
-            const SizedBox(height: 14),
-          ],
-          gamificationAsync.when(
-            data: (g) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: _HomeStreakCard(
-                streak: g.streak,
-                activeToday: g.activeToday,
-                onTap: () => context.push('/achievements'),
-              ),
-            ),
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-          const SizedBox(height: 8),
-          _CaptureButton(
-            onTap: () => showAppSheet<void>(
-              context,
-              bottomInset: 20,
-              builder: (_) => const CaptureEntrySheet(),
-            ),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () => context.push('/paper/setup'),
-            icon: const Icon(CupertinoIcons.sparkles, size: 18),
-            label: const Text('AI 变式组卷'),
-            style: OutlinedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 46)),
-          ),
-          if (!isGuest) const VisionQuotaCard(),
-          const SizedBox(height: 10),
-          // 数据存储提示：仅在游客/未登录时显示（登录后云端有备份，不必提示本机丢失）
-          if (auth is! AuthAuthenticated)
-            _LocalDataNotice(onTap: () => context.go('/settings/data')),
-          const SizedBox(height: 20),
-          analysisTasksAsync.when(
-            data: (tasks) {
-              if (tasks.isEmpty) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: BackgroundAnalysisSection(
-                  tasks: tasks,
-                  onOpenResult: (task) {
-                    final result = task.resultQuestion;
-                    if (result == null) return;
-                    ref.read(currentQuestionProvider.notifier).state = result;
-                    context.go('/analysis/result');
-                  },
-                  onRetry: (task) {
-                    _retryTask(context, ref, task);
-                  },
-                  onDelete: (task) => _deleteTask(context, ref, task),
-                ),
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-          dueAsync.when(
-            data: (due) => due.isNotEmpty
-                ? _ReviewBanner(
-                    count: due.length, onTap: () => context.go('/review'))
-                : const SizedBox.shrink(),
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-          const SizedBox(height: 20),
-          Text('学习统计', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          RepaintBoundary(
-            child: questionsAsync.when(
-              data: (questions) => _buildStatsSection(context, ref, questions),
-              loading: () => const _StatsGridSkeleton(),
-              error: (e, _) => Text('加载失败: $e'),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              Text('最近新增', style: Theme.of(context).textTheme.titleLarge),
-              TextButton(
-                onPressed: () => context.go('/notebook'),
-                child: const Text('查看全部'),
+              if (isGuest) ...<Widget>[
+                _GuestBanner(
+                  onLogin: () async {
+                    await ref.read(authControllerProvider.notifier).logout();
+                    if (context.mounted) context.go('/login');
+                  },
+                ),
+                const SizedBox(height: AppTokens.s3),
+              ],
+              gamificationAsync.when(
+                data: (g) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppTokens.s3),
+                  child: _HomeStreakCard(
+                    streak: g.streak,
+                    activeToday: g.activeToday,
+                    onTap: () => context.push('/achievements'),
+                  ),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+              _CaptureButton(onTap: () => _openCaptureSheet(context)),
+              const SizedBox(height: AppTokens.s4),
+              _QuickActions(
+                onCapture: () => _openCaptureSheet(context),
+                onReview: () => context.go('/review'),
+                onPaper: () => context.push('/paper/setup'),
+                onInsight: () => showAppToast(context, '学情报告即将上线'),
+              ),
+              if (!isGuest) const VisionQuotaCard(),
+              // 数据存储提示：仅在游客/未登录时显示（登录后云端有备份，不必提示本机丢失）
+              if (auth is! AuthAuthenticated) ...<Widget>[
+                const SizedBox(height: AppTokens.s3),
+                _LocalDataNotice(onTap: () => context.go('/settings/data')),
+              ],
+              const SizedBox(height: AppTokens.s4),
+              analysisTasksAsync.when(
+                data: (tasks) {
+                  if (tasks.isEmpty) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppTokens.s4),
+                    child: BackgroundAnalysisSection(
+                      tasks: tasks,
+                      onOpenResult: (task) {
+                        final result = task.resultQuestion;
+                        if (result == null) return;
+                        ref.read(currentQuestionProvider.notifier).state =
+                            result;
+                        context.go('/analysis/result');
+                      },
+                      onRetry: (task) {
+                        _retryTask(context, ref, task);
+                      },
+                      onDelete: (task) => _deleteTask(context, ref, task),
+                    ),
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+              dueAsync.when(
+                data: (due) => due.isNotEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.only(bottom: AppTokens.s3),
+                        child: _ReviewBanner(
+                            count: due.length,
+                            onTap: () => context.go('/review')),
+                      )
+                    : const SizedBox.shrink(),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+              RepaintBoundary(
+                child: questionsAsync.when(
+                  data: (questions) =>
+                      _buildStatsSection(context, ref, questions),
+                  loading: () => const _StatsGridSkeleton(),
+                  error: (e, _) => _LoadError(message: '$e'),
+                ),
+              ),
+              const SizedBox(height: AppTokens.s6),
+              _SectionHeader(
+                title: '最近收录',
+                actionLabel: '查看全部',
+                onAction: () => context.go('/notebook'),
+              ),
+              const SizedBox(height: AppTokens.s2),
+              questionsAsync.when(
+                data: (questions) => _RecentList(
+                    questions: questions.take(5).toList(), ref: ref),
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppTokens.s6),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (e, _) => _LoadError(message: '$e'),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          questionsAsync.when(
-            data: (questions) =>
-                _RecentList(questions: questions.take(5).toList(), ref: ref),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('加载失败: $e'),
-          ),
-        ],
-        ),
         ),
       ),
+    );
+  }
+
+  /// 打开拍照录题弹层（主按钮与四宫格「拍错题」共用）。
+  Future<void> _openCaptureSheet(BuildContext context) async {
+    await showAppSheet<void>(
+      context,
+      bottomInset: 20,
+      builder: (_) => const CaptureEntrySheet(),
     );
   }
 
@@ -266,12 +273,13 @@ class HomeScreen extends ConsumerWidget {
     }
   }
 
+  /// 统计区（T3）：Hero 卡（累计错题 + 进度环 + 语义标签）+ 三宫格科目统计。
   Widget _buildStatsSection(
     BuildContext context,
     WidgetRef ref,
     List<QuestionRecord> questions,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final t = context.tokens;
     final total = questions.length;
     final mastered =
         questions.where((q) => q.masteryLevel == MasteryLevel.mastered).length;
@@ -284,95 +292,74 @@ class HomeScreen extends ConsumerWidget {
           createdAt.day == now.day;
     }).length;
     final progress = total == 0 ? 0.0 : mastered / total;
-    final percent = (progress * 100).round();
+
+    int subjectCount(String label) =>
+        questions.where((q) => q.subject.label == label).length;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        StatsGrid(
-          total: total,
-          todayNew: todayNew,
-          pending: pending,
-          mastered: mastered,
-          onTotalTap: () => _openNotebook(context, ref),
-          onTodayNewTap: () => _openNotebook(
-            context,
-            ref,
-            createdToday: true,
-          ),
-          onMasteredTap: () => _openNotebook(
-            context,
-            ref,
-            masteryLevel: MasteryLevel.mastered,
-          ),
-          onPendingTap: () => context.go('/review'),
-        ),
-        if (total > 0) ...<Widget>[
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colorScheme.outlineVariant),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Text(
-                      '掌握进度',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '$percent%',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 10,
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                    color: colorScheme.primary,
+        Semantics(
+          button: true,
+          label: '累计错题 $total 道，点击查看错题本',
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _openNotebook(context, ref),
+            child: AppStatHero(
+              label: '累计错题 · 今日新增 $todayNew',
+              value: total,
+              unit: '道',
+              // 有数据才画进度环，空库时保持极简
+              progress: total == 0 ? null : progress,
+              chips: <Widget>[
+                _StatChip(
+                  label: '已掌握 $mastered',
+                  color: t.success,
+                  background: t.successSoft,
+                  onTap: () => _openNotebook(
+                    context,
+                    ref,
+                    masteryLevel: MasteryLevel.mastered,
                   ),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: <Widget>[
-                    Text(
-                      '$mastered / $total 已掌握',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '$pending 待复习',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                _StatChip(
+                  label: '待复习 $pending',
+                  color: t.warning,
+                  background: t.warningSoft,
+                  onTap: () => context.go('/review'),
                 ),
               ],
             ),
           ),
-        ],
+        ),
+        const SizedBox(height: AppTokens.s3),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: AppStatMini(
+                value: subjectCount('数学'),
+                label: '数学',
+                color: t.subjectColor('数学'),
+              ),
+            ),
+            const SizedBox(width: AppTokens.s3),
+            Expanded(
+              child: AppStatMini(
+                value: subjectCount('物理'),
+                label: '物理',
+                color: t.subjectColor('物理'),
+              ),
+            ),
+            const SizedBox(width: AppTokens.s3),
+            Expanded(
+              child: AppStatMini(
+                value: subjectCount('英语'),
+                label: '英语',
+                color: t.subjectColor('英语'),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -393,6 +380,7 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
+/// 统计区骨架（Hero + 三宫格），全部走 token。
 class _StatsGridSkeleton extends StatelessWidget {
   const _StatsGridSkeleton();
 
@@ -400,19 +388,15 @@ class _StatsGridSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Column(
       children: <Widget>[
+        _SkeletonBlock(height: 132),
+        SizedBox(height: AppTokens.s3),
         Row(
           children: <Widget>[
-            Expanded(child: _StatCardSkeleton()),
-            SizedBox(width: 12, height: 70),
-            Expanded(child: _StatCardSkeleton()),
-          ],
-        ),
-        SizedBox(height: 12),
-        Row(
-          children: <Widget>[
-            Expanded(child: _StatCardSkeleton()),
-            SizedBox(width: 12, height: 70),
-            Expanded(child: _StatCardSkeleton()),
+            Expanded(child: _SkeletonBlock(height: 72)),
+            SizedBox(width: AppTokens.s3),
+            Expanded(child: _SkeletonBlock(height: 72)),
+            SizedBox(width: AppTokens.s3),
+            Expanded(child: _SkeletonBlock(height: 72)),
           ],
         ),
       ],
@@ -420,21 +404,263 @@ class _StatsGridSkeleton extends StatelessWidget {
   }
 }
 
-class _StatCardSkeleton extends StatelessWidget {
-  const _StatCardSkeleton();
+class _SkeletonBlock extends StatelessWidget {
+  const _SkeletonBlock({required this.height});
+
+  final double height;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
+    final t = context.tokens;
     return Container(
-      height: 70,
+      height: height,
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(10),
+        color: t.isDark ? t.card : t.formulaBg,
+        borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+        border: t.isDark ? Border.all(color: t.cardBorder) : null,
       ),
     );
   }
+}
+
+/// 统计卡内的语义标签（复用 [AppTag] 视觉，带点击）。
+class _StatChip extends StatelessWidget {
+  const _StatChip({
+    required this.label,
+    required this.color,
+    required this.background,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final Color background;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AppTag(
+          label,
+          color: color,
+          background: background,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}
+
+/// 区块标题（demo `.detail-label`），右侧可带操作入口。
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: AppTokens.textXs,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1,
+              color: t.textTertiary,
+            ),
+          ),
+        ),
+        if (actionLabel != null)
+          TextButton(
+            onPressed: onAction,
+            style: TextButton.styleFrom(
+              foregroundColor: t.primary,
+              minimumSize: const Size(0, 32),
+              padding: const EdgeInsets.symmetric(horizontal: AppTokens.s2),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              actionLabel!,
+              style: const TextStyle(
+                fontSize: AppTokens.textXs,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// 首页四宫格快捷入口（demo `.quick-actions`）：48×48 图标底 + `textXs` 文案。
+class _QuickActions extends StatelessWidget {
+  const _QuickActions({
+    required this.onCapture,
+    required this.onReview,
+    required this.onPaper,
+    required this.onInsight,
+  });
+
+  final VoidCallback onCapture;
+  final VoidCallback onReview;
+  final VoidCallback onPaper;
+  final VoidCallback onInsight;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: _QuickItem(
+            icon: CupertinoIcons.camera,
+            label: '拍错题',
+            color: t.primary,
+            onTap: onCapture,
+          ),
+        ),
+        Expanded(
+          child: _QuickItem(
+            icon: CupertinoIcons.arrow_2_circlepath,
+            label: '去复习',
+            color: t.secondary,
+            onTap: onReview,
+          ),
+        ),
+        Expanded(
+          child: _QuickItem(
+            icon: CupertinoIcons.doc_text,
+            label: '组卷',
+            color: t.warning,
+            onTap: onPaper,
+          ),
+        ),
+        Expanded(
+          child: _QuickItem(
+            icon: CupertinoIcons.chart_bar_alt_fill,
+            label: '学情',
+            color: t.success,
+            onTap: onInsight,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickItem extends StatelessWidget {
+  const _QuickItem({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Column(
+          children: <Widget>[
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: t.card,
+                borderRadius: BorderRadius.circular(AppTokens.radiusLg),
+                border: t.isDark ? Border.all(color: t.cardBorder) : null,
+                boxShadow: t.isDark ? null : t.shadow1,
+              ),
+              child: Icon(icon, size: 20, color: color),
+            ),
+            const SizedBox(height: AppTokens.s2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: AppTokens.textXs,
+                color: t.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 加载失败提示（走 error 语义色）。
+class _LoadError extends StatelessWidget {
+  const _LoadError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Text(
+      '加载失败: $message',
+      style: TextStyle(fontSize: AppTokens.textSm, color: t.error),
+    );
+  }
+}
+
+String _masteryLabel(MasteryLevel level) {
+  switch (level) {
+    case MasteryLevel.newQuestion:
+      return '新增';
+    case MasteryLevel.reviewing:
+      return '复习中';
+    case MasteryLevel.mastered:
+      return '已掌握';
+  }
+}
+
+Color _masteryColor(AppTokens t, MasteryLevel level) {
+  switch (level) {
+    case MasteryLevel.newQuestion:
+      return t.textSecondary;
+    case MasteryLevel.reviewing:
+      return t.warning;
+    case MasteryLevel.mastered:
+      return t.success;
+  }
+}
+
+/// 科目标签底：浅色用科目软底，深色用科目色低透明度底（避免浅色软底在深色下刺眼）。
+Color _subjectTagBackground(AppTokens t, String subject) => t.isDark
+    ? t.subjectColor(subject).withValues(alpha: 0.18)
+    : t.subjectSoft(subject);
+
+String _formatDate(DateTime date) {
+  final now = DateTime.now();
+  final diff = now.difference(date);
+  if (diff.inDays == 0) return '今天';
+  if (diff.inDays == 1) return '昨天';
+  if (diff.inDays < 7) return '${diff.inDays}天前';
+  return '${date.month}月${date.day}日';
 }
 
 class _RecentList extends StatelessWidget {
@@ -445,24 +671,23 @@ class _RecentList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final t = context.tokens;
 
     if (questions.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: colorScheme.outlineVariant),
-        ),
+      return AppCard(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppTokens.s4, vertical: AppTokens.s8),
         child: Column(
           children: <Widget>[
-            Icon(CupertinoIcons.question,
-                size: 48,
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.45)),
-            const SizedBox(height: 12),
-            Text('暂无错题，拍照开始添加',
-                style: TextStyle(color: colorScheme.onSurfaceVariant)),
+            Icon(CupertinoIcons.photo, size: 40, color: t.textTertiary),
+            const SizedBox(height: AppTokens.s3),
+            Text(
+              '暂无错题，拍照开始添加',
+              style: TextStyle(
+                fontSize: AppTokens.textSm,
+                color: t.textSecondary,
+              ),
+            ),
           ],
         ),
       );
@@ -484,6 +709,7 @@ class _RecentList extends StatelessWidget {
   }
 }
 
+/// 最近收录卡（demo `.q-card`）：科目 tag + 掌握度 + 时间 / 题干 / 知识点 tags。
 class _RecentQuestionCard extends StatelessWidget {
   const _RecentQuestionCard(
       {super.key, required this.question, required this.onTap});
@@ -493,92 +719,74 @@ class _RecentQuestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final aiTags = question.aiTags;
-    final customTags = question.customTags;
-    final allTags = [...aiTags, ...customTags];
+    final t = context.tokens;
+    final subjectLabel = question.subject.label;
+    final knowledgePoints = question.aiKnowledgePoints.isNotEmpty
+        ? question.aiKnowledgePoints
+        : question.allTags;
+    final tags = knowledgePoints.take(2).toList();
 
     return Semantics(
       button: true,
-      label: '错题: ${question.correctedText}，科目: ${question.subject.label}',
+      label: '错题: ${question.correctedText}，科目: $subjectLabel',
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Container(
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: colorScheme.outlineVariant),
-          ),
-          child: ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            leading: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: question.subject.color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Icon(question.subject.icon,
-                  size: 16, color: question.subject.color),
-            ),
-            title: MathContentView(
-              question.correctedText,
-              contentFormat: question.contentFormat,
-              mode: MathContentViewMode.compact,
-              maxLines: 1,
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: colorScheme.onSurface),
-            ),
-            subtitle: Row(
-              children: <Widget>[
-                Text(question.subject.label,
-                    style:
-                        TextStyle(fontSize: 12, color: question.subject.color)),
-                if (allTags.isNotEmpty) ...<Widget>[
-                  const SizedBox(width: 8),
-                  ...allTags.take(2).map((tag) {
-                    final isAiTag = aiTags.contains(tag);
-                    final tagColor = isAiTag
-                        ? const Color(0xFFD97706)
-                        : const Color(0xFF4F46E5);
-                    final tagBackground = isDark
-                        ? tagColor.withValues(alpha: 0.14)
-                        : isAiTag
-                            ? const Color(0xFFFFF7ED)
-                            : const Color(0xFFEEF2FF);
-                    return Container(
-                      margin: const EdgeInsets.only(right: 4),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: tagBackground,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: isDark
-                              ? tagColor.withValues(alpha: 0.22)
-                              : colorScheme.outlineVariant
-                                  .withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: MathContentView(
-                        tag,
-                        mode: MathContentViewMode.compact,
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: isDark ? colorScheme.onSurface : tagColor),
-                      ),
-                    );
-                  }),
+        padding: const EdgeInsets.only(bottom: AppTokens.s3),
+        child: AppCard(
+          onTap: onTap,
+          padding: const EdgeInsets.all(AppTokens.s3),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  AppTag(
+                    subjectLabel,
+                    color: t.subjectColor(subjectLabel),
+                    background: _subjectTagBackground(t, subjectLabel),
+                    fontWeight: FontWeight.w600,
+                  ),
+                  const SizedBox(width: AppTokens.s2),
+                  Text(
+                    _masteryLabel(question.masteryLevel),
+                    style: TextStyle(
+                      fontSize: AppTokens.textXs,
+                      fontWeight: FontWeight.w500,
+                      color: _masteryColor(t, question.masteryLevel),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    _formatDate(question.createdAt),
+                    style: TextStyle(
+                      fontSize: AppTokens.textXs,
+                      color: t.textTertiary,
+                    ),
+                  ),
                 ],
+              ),
+              const SizedBox(height: AppTokens.s2),
+              MathContentView(
+                question.correctedText,
+                contentFormat: question.contentFormat,
+                mode: MathContentViewMode.compact,
+                maxLines: 2,
+                style: TextStyle(
+                  fontSize: AppTokens.textSm,
+                  height: 1.5,
+                  color: t.textPrimary,
+                ),
+              ),
+              if (tags.isNotEmpty) ...<Widget>[
+                const SizedBox(height: AppTokens.s3),
+                Wrap(
+                  spacing: AppTokens.s2,
+                  runSpacing: AppTokens.s2,
+                  children: tags
+                      .map((tag) => AppTag(tag, radius: AppTokens.radiusSm))
+                      .toList(),
+                ),
               ],
-            ),
-            trailing: Icon(CupertinoIcons.chevron_right,
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.65)),
-            onTap: onTap,
+            ],
           ),
         ),
       ),
@@ -586,6 +794,7 @@ class _RecentQuestionCard extends StatelessWidget {
   }
 }
 
+/// 待复习提醒条（点击进入复习 Tab）。
 class _ReviewBanner extends StatelessWidget {
   const _ReviewBanner({required this.count, required this.onTap});
 
@@ -594,64 +803,65 @@ class _ReviewBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const orange = Color(0xFFF97316);
-
+    final t = context.tokens;
+    final radius = BorderRadius.circular(AppTokens.radiusLg);
     return Semantics(
       button: true,
       label: '待复习 $count 道错题，点击进入复习',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isDark
-                ? orange.withValues(alpha: 0.12)
-                : const Color(0xFFFFF7ED),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: isDark
-                    ? orange.withValues(alpha: 0.35)
-                    : const Color(0xFFFED7AA)),
-          ),
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? orange.withValues(alpha: 0.18)
-                      : const Color(0xFFFFEDD5),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: const Icon(CupertinoIcons.arrow_2_circlepath,
-                    color: Color(0xFFF97316), size: 22),
+      child: Material(
+        color: t.primarySoft,
+        borderRadius: radius,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: Container(
+            padding: const EdgeInsets.all(AppTokens.s3),
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(
+                color: t.primary.withValues(alpha: t.isDark ? 0.5 : 0.22),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text('待复习',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurface)),
-                    Text('$count 道错题等待巩固',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: isDark
-                                ? colorScheme.onSurfaceVariant
-                                : const Color(0xFFC2410C))),
-                  ],
+            ),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: t.primary.withValues(alpha: t.isDark ? 0.2 : 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Icon(CupertinoIcons.arrow_2_circlepath,
+                      size: 20, color: t.primary),
                 ),
-              ),
-              const Icon(CupertinoIcons.chevron_right,
-                  color: Color(0xFFF97316), size: 22),
-            ],
+                const SizedBox(width: AppTokens.s3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        '待复习',
+                        style: TextStyle(
+                          fontSize: AppTokens.textSm,
+                          fontWeight: FontWeight.w600,
+                          color: t.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$count 道错题等待巩固',
+                        style: TextStyle(
+                          fontSize: AppTokens.textXs,
+                          color: t.isDark ? t.textSecondary : t.primaryDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(CupertinoIcons.chevron_right,
+                    size: 18, color: t.primary),
+              ],
+            ),
           ),
         ),
       ),
@@ -673,9 +883,8 @@ class _HomeStreakCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const orange = Color(0xFFF97316);
+    final t = context.tokens;
+    final radius = BorderRadius.circular(AppTokens.radiusLg);
     final subtitle = streak == 0
         ? '开启你的连击'
         : (activeToday ? '今天已学习 · 保持住' : '今天还没学，学一下保持连击');
@@ -683,72 +892,69 @@ class _HomeStreakCard extends StatelessWidget {
     return Semantics(
       button: true,
       label: '学习连击 $streak 天，点击查看成就徽章',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isDark
-                  ? [orange.withValues(alpha: 0.26), const Color(0xFF7C2D12)]
-                  : [const Color(0xFFFFF7ED), const Color(0xFFFFEDD5)],
-            ),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color:
-                  isDark ? orange.withValues(alpha: 0.35) : const Color(0xFFFED7AA),
-            ),
-          ),
-          child: Row(
-            children: <Widget>[
-              const Text('🔥', style: TextStyle(fontSize: 28)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text.rich(
-                      TextSpan(
-                        children: <InlineSpan>[
-                          TextSpan(
-                            text: '$streak',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              color: orange,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' 天连击',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSurface,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? colorScheme.onSurfaceVariant
-                            : const Color(0xFFC2410C),
-                      ),
-                    ),
-                  ],
-                ),
+      child: Material(
+        color: t.warningSoft,
+        borderRadius: radius,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppTokens.s4, vertical: AppTokens.s3),
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(
+                color: t.warning.withValues(alpha: t.isDark ? 0.45 : 0.3),
               ),
-              Icon(CupertinoIcons.star,
-                  size: 20, color: orange.withValues(alpha: 0.9)),
-              const SizedBox(width: 4),
-              Icon(CupertinoIcons.chevron_right,
-                  size: 16, color: orange.withValues(alpha: 0.7)),
-            ],
+            ),
+            child: Row(
+              children: <Widget>[
+                const Text('🔥', style: TextStyle(fontSize: 28)),
+                const SizedBox(width: AppTokens.s3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text.rich(
+                        TextSpan(
+                          children: <InlineSpan>[
+                            TextSpan(
+                              text: '$streak',
+                              style: TextStyle(
+                                fontSize: AppTokens.textXl,
+                                fontWeight: FontWeight.w800,
+                                color: t.warning,
+                              ),
+                            ),
+                            TextSpan(
+                              text: ' 天连击',
+                              style: TextStyle(
+                                fontSize: AppTokens.textBase,
+                                fontWeight: FontWeight.w600,
+                                color: t.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: AppTokens.textXs,
+                          color: t.isDark ? t.textSecondary : t.warning,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(CupertinoIcons.star,
+                    size: 20, color: t.warning.withValues(alpha: 0.9)),
+                const SizedBox(width: AppTokens.s1),
+                Icon(CupertinoIcons.chevron_right,
+                    size: 16, color: t.warning.withValues(alpha: 0.7)),
+              ],
+            ),
           ),
         ),
       ),
@@ -764,40 +970,46 @@ class _LocalDataNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final t = context.tokens;
+    final radius = BorderRadius.circular(AppTokens.radiusLg);
     return Material(
-      color: const Color(0xFFFEF9C3),
-      borderRadius: BorderRadius.circular(12),
+      color: t.warningSoft,
+      borderRadius: radius,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        borderRadius: radius,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppTokens.s3, vertical: AppTokens.s2 + 2),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: t.warning.withValues(alpha: t.isDark ? 0.4 : 0.28),
+            ),
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(top: 1),
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
                 child: Icon(CupertinoIcons.device_phone_portrait,
-                    size: 16, color: Color(0xFF92400E)),
+                    size: 16, color: t.warning),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppTokens.s2),
               Expanded(
                 child: Text(
                   '错题保存在本机，卸载或清除数据会丢失。点击前往「设置 → 数据管理」导出备份。',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: AppTokens.textXs,
                     height: 1.4,
-                    color: theme.brightness == Brightness.dark
-                        ? const Color(0xFFD6B15E)
-                        : const Color(0xFF92400E),
+                    color: t.textSecondary,
                   ),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.only(top: 2),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
                 child: Icon(CupertinoIcons.chevron_right,
-                    size: 14, color: Color(0xFF92400E)),
+                    size: 14, color: t.warning),
               ),
             ],
           ),
@@ -807,7 +1019,6 @@ class _LocalDataNotice extends StatelessWidget {
   }
 }
 
-/// 游客模式提示条：提醒登录以云端同步。
 /// 首页「拍照录题」按钮：玻璃开启时用 `GlassButton`，否则回退 Material。
 class _CaptureButton extends ConsumerWidget {
   const _CaptureButton({required this.onTap});
@@ -858,6 +1069,7 @@ class _CaptureButton extends ConsumerWidget {
   }
 }
 
+/// 游客模式提示条：提醒登录以云端同步。
 class _GuestBanner extends StatelessWidget {
   const _GuestBanner({required this.onLogin});
 
@@ -865,32 +1077,49 @@ class _GuestBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: isDark ? const Color(0xFF1F2937) : const Color(0xFFEEF2FF),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: <Widget>[
-            const Icon(Icons.person_outline, size: 18, color: Color(0xFF4F46E5)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '游客模式：数据只保存在本机，建议登录后云端同步。',
-                style: TextStyle(
-                  fontSize: 12,
-                  height: 1.4,
-                  color: isDark ? const Color(0xFFC7D2FE) : const Color(0xFF3730A3),
-                ),
+    final t = context.tokens;
+    final radius = BorderRadius.circular(AppTokens.radiusLg);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.s3, vertical: AppTokens.s2),
+      decoration: BoxDecoration(
+        color: t.primarySoft,
+        borderRadius: radius,
+        border: Border.all(
+          color: t.primary.withValues(alpha: t.isDark ? 0.5 : 0.22),
+        ),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.person_outline, size: 18, color: t.primary),
+          const SizedBox(width: AppTokens.s2),
+          Expanded(
+            child: Text(
+              '游客模式：数据只保存在本机，建议登录后云端同步。',
+              style: TextStyle(
+                fontSize: AppTokens.textXs,
+                height: 1.4,
+                color: t.isDark ? t.textPrimary : t.primaryDark,
               ),
             ),
-            TextButton(
-              onPressed: onLogin,
-              child: const Text('去登录', style: TextStyle(fontSize: 12)),
+          ),
+          TextButton(
+            onPressed: onLogin,
+            style: TextButton.styleFrom(
+              foregroundColor: t.primary,
+              minimumSize: const Size(0, 32),
+              padding: const EdgeInsets.symmetric(horizontal: AppTokens.s2),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-          ],
-        ),
+            child: const Text(
+              '去登录',
+              style: TextStyle(
+                fontSize: AppTokens.textXs,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

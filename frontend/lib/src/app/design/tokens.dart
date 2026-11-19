@@ -104,7 +104,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
   }
 
   /// 科目软底（标签背景）。
+  ///
+  /// 深色下一律用「科目色 18% 透明」叠在卡片上，避免固定浅底在深色里刺眼。
   Color subjectSoft(String subject) {
+    if (isDark) return subjectColor(subject).withValues(alpha: 0.18);
     switch (subject) {
       case '语文':
         return successSoft;

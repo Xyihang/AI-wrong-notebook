@@ -304,3 +304,25 @@ class AppTokens extends ThemeExtension<AppTokens> {
 - [ ] 确认"Won't Have"清单
 - [ ] 确认验收标准可接受
 - [ ] 通过后进入 `/plan`：按 T1→T2→T3..T7→T9 拆任务，每个任务独立提交 + 构建验证
+
+
+---
+
+## 11. 实施进度（2026-11-19，T1–T7 初版完成）
+
+已完成（模拟器 Android 15 上装机验证）：
+- T1 Token：`lib/src/app/design/tokens.dart`，浅/深两套挂到 ThemeExtension；`context.tokens` 全站可用；
+- T2 组件：`AppCard`/`AppSectionLabel`/`AppButton`/`AppChip`/`AppTag`/`AppStatHero`/`AppStatMini`；
+- T3 首页：Hero 统计卡（大数字+进度环+soft 标签）、科目三宫格、四宫格快捷入口、最近收录卡、游客条/连击卡 token 化（玻璃胶囊主按钮保留）；
+- T4 错题本：`AppChip` 筛选（带数量）、错题卡重构（科目/掌握态/时间/公式块/知识点/同类标记）、空态 token 化；
+- T5 详情：同类题横幅、分区卡片（题目/解析步骤条/错因）、底部双按钮；
+- T6 复习：环形进度、复习卡+三键、下次复习卡、`CustomScrollView` 懒加载；
+- T7 设置：外观/学习/数据三组、三段式条目、危险项 error 色。
+
+硬编码颜色：412 → 342（其中 48 处为 tokens 定义本身；页面级 412→294，约 -29%）。
+
+未完成 / 待办：
+- T9 其余页面跟随（`analysis_result_screen` 68 处、`exercise_practice_screen` 39 处、`question_split_confirmation_screen` 30 处等仍是旧配色）；
+- T10 首页 FAB + 底部渐隐（`AppFab`/`AppBottomFade` 组件未创建）；
+- 深色模式实机截图验收未做（外观切深色的自动化点击未成功）；
+- 既有 widget 测试需同步文案：`test/smoke/app_smoke_test.dart`（「最近新增」→「最近收录」）、`test/features/home/home_stats_navigation_test.dart`（四个统计入口文案变化）。

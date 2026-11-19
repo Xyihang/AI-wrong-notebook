@@ -1,5 +1,6 @@
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
+import 'package:smart_wrong_notebook/src/app/design/tokens.dart';
 
 ThemeData buildLightTheme() {
   final base = FlexThemeData.light(
@@ -22,6 +23,7 @@ ThemeData buildLightTheme() {
     ),
   );
   return base.copyWith(
+    extensions: <ThemeExtension<dynamic>>[AppTokens.light],
     iconTheme: IconThemeData(
       color: Colors.grey.shade700,
       size: 24,
@@ -60,6 +62,7 @@ ThemeData buildDarkTheme() {
     ),
   );
   return base.copyWith(
+    extensions: <ThemeExtension<dynamic>>[AppTokens.dark],
     iconTheme: const IconThemeData(
       color: Colors.white70,
       size: 24,

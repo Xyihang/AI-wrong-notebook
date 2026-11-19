@@ -1,6 +1,7 @@
 # 界面美化实施计划（UI Beautify Plan）
 
-- 状态：待评审（Plan 阶段，未实施）
+- 状态：**实施中**（2026-11-19 起；规格见 [SPEC-UI-BEAUTIFY.md](SPEC-UI-BEAUTIFY.md)，任务编号 T1–T10）
+- 已完成：T1 设计 Token（`lib/src/app/design/tokens.dart`）、T2 基础组件（`AppCard`/`AppButton`/`AppChip`/`AppTag`）
 - 日期：2026-11-19
 - 关联文档：[SPEC-LIQUID-GLASS.md](SPEC-LIQUID-GLASS.md)（液态玻璃已完成 P0–P2、部分 P3）
 

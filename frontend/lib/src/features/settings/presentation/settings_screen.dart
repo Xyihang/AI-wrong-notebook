@@ -23,6 +23,8 @@ class SettingsScreen extends ConsumerWidget {
     // 统一弹层门面：玻璃开启时玻璃弹层，关闭时回退 Material
     final selected = await showAppSheet<GlassAppearance>(
       context,
+      // 与拍照弹层一致：底部留 20，避开悬浮 Dock
+      bottomInset: 20,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/domain/models/achievement.dart';
 
 /// 成就墙：展示所有徽章（已解锁彩色 / 未解锁置灰）与学习连击进度。
@@ -14,7 +15,7 @@ class AchievementsScreen extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('成就徽章')),
+      appBar: glassTopBar(context, title: const Text('成就徽章')),
       body: snapshotAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('加载失败: $e')),

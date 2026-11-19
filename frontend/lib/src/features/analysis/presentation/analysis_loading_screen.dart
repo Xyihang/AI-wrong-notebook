@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
 import 'package:smart_wrong_notebook/src/data/services/question_analysis_coordinator.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
@@ -106,7 +107,7 @@ class _AnalysisLoadingScreenState extends ConsumerState<AnalysisLoadingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(context, 
         title: const Text('AI 解析'),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.chevron_left),

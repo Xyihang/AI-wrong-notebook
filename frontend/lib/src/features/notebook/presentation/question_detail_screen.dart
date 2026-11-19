@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
@@ -40,7 +41,7 @@ class QuestionDetailScreen extends ConsumerWidget {
 
     if (current == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('错题详情')),
+        appBar: glassTopBar(context, title: const Text('错题详情')),
         body: const Center(child: Text('未找到该错题')),
       );
     }
@@ -69,23 +70,30 @@ class QuestionDetailScreen extends ConsumerWidget {
             icon: const Icon(CupertinoIcons.pencil),
             onPressed: () => _editQuestion(context, ref, current),
           ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'delete') _confirmDelete(context, ref, current);
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(CupertinoIcons.trash, color: Colors.red, size: 20),
-                    SizedBox(width: 8),
-                    Text('删除', style: TextStyle(color: Colors.red)),
-                  ],
+          // 更多：玻璃开启时用玻璃操作面板，关闭时保留 Material 菜单
+          if (glassEnabled)
+            IconButton(
+              icon: const Icon(CupertinoIcons.ellipsis_vertical),
+              onPressed: () => _showGlassActions(context, ref, current),
+            )
+          else
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'delete') _confirmDelete(context, ref, current);
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(CupertinoIcons.trash, color: Colors.red, size: 20),
+                      SizedBox(width: 8),
+                      Text('删除', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
       body: ListView(
@@ -660,28 +668,56 @@ class QuestionDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmDelete(
-      BuildContext context, WidgetRef ref, QuestionRecord question) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('删除后无法恢复，确定要删除这道错题吗？'),
-        actions: <Widget>[
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          TextButton(
-            onPressed: () async {
-              await ref.read(questionRepositoryProvider).delete(question.id);
-              invalidateQuestionList(ref);
-              if (ctx.mounted) Navigator.pop(ctx);
-              if (context.mounted) context.go('/notebook');
-            },
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+  /// 玻璃操作面板（详情页「更多」）：删除等操作。
+  Future<void> _showGlassActions(
+      BuildContext context, WidgetRef ref, QuestionRecord question) async {
+    final scheme = Theme.of(context).colorScheme;
+    await showAppSheet<void>(
+      context,
+      bottomInset: 20,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(CupertinoIcons.trash, color: Colors.red),
+              title: const Text('删除',
+                  style: TextStyle(
+                      color: Colors.red, fontWeight: FontWeight.w500)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _confirmDelete(context, ref, question);
+              },
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete(
+      BuildContext context, WidgetRef ref, QuestionRecord question) async {
+    final ok = await showAppConfirm(
+      context,
+      title: '确认删除',
+      message: '删除后无法恢复，确定要删除这道错题吗？',
+      confirmText: '删除',
+      destructive: true,
+    );
+    if (!ok || !context.mounted) return;
+    await ref.read(questionRepositoryProvider).delete(question.id);
+    invalidateQuestionList(ref);
+    if (context.mounted) context.go('/notebook');
   }
 
   void _showAddTagDialog(

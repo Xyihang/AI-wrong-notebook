@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 import 'package:smart_wrong_notebook/src/domain/models/review_log.dart';
@@ -16,7 +17,7 @@ class ReviewHistoryScreen extends ConsumerWidget {
     final logsAsync = ref.watch(_reviewLogsWithQuestionsProvider);
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(context, 
         title: const Text('复习记录'),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.chevron_left),

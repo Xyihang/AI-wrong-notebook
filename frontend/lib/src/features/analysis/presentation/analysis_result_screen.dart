@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/data/services/question_analysis_coordinator.dart';
 import 'package:smart_wrong_notebook/src/domain/models/analysis_result.dart';
 import 'package:smart_wrong_notebook/src/domain/models/mastery_level.dart';
@@ -72,7 +73,7 @@ class _AnalysisResultScreenState extends ConsumerState<AnalysisResultScreen> {
 
     if (record == null) {
       return Scaffold(
-        appBar: AppBar(
+        appBar: glassTopBar(context, 
           title: const Text('AI 解析结果'),
           leading: IconButton(
             icon: const Icon(CupertinoIcons.chevron_left),
@@ -121,7 +122,7 @@ class _AnalysisResultScreenState extends ConsumerState<AnalysisResultScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(context, 
         title: const Text('AI 解析结果'),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.chevron_left),

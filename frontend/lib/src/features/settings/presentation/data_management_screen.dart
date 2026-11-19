@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/data/services/analysis_failure_log_service.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
@@ -22,7 +23,8 @@ class DataManagementScreen extends ConsumerWidget {
     final failedTaskCountAsync = ref.watch(failedAnalysisTaskCountProvider);
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(
+        context,
         title: const Text('数据管理'),
         leading: IconButton(
             icon: const Icon(CupertinoIcons.chevron_left),

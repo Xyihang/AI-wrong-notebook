@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 
 class PromptSettingsScreen extends ConsumerStatefulWidget {
   const PromptSettingsScreen({super.key});
@@ -56,7 +57,7 @@ class _PromptSettingsScreenState extends ConsumerState<PromptSettingsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(context, 
         title: const Text('提示词设置'),
         leading: IconButton(
             icon: const Icon(CupertinoIcons.chevron_left),

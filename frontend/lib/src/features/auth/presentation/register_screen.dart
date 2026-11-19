@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/data/remote/backend/backend_client.dart';
 import 'package:smart_wrong_notebook/src/features/auth/presentation/auth_theme.dart';
 
@@ -110,7 +111,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('注册')),
+      appBar: glassTopBar(context, title: const Text('注册')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

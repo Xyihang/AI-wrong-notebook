@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 
 class QuestionCorrectionScreen extends ConsumerWidget {
   const QuestionCorrectionScreen({super.key});
@@ -14,7 +15,7 @@ class QuestionCorrectionScreen extends ConsumerWidget {
     final imagePath = current?.imagePath;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(context, 
         title: const Text('题目预览'),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.chevron_left),

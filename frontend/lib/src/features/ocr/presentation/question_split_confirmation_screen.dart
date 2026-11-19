@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_split_session.dart';
 import 'package:smart_wrong_notebook/src/shared/widgets/math_content_view.dart';
@@ -36,7 +37,7 @@ class _QuestionSplitConfirmationScreenState
 
     if (session == null || source == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('拆分保存')),
+        appBar: glassTopBar(context, title: const Text('拆分保存')),
         body: const Center(child: Text('未找到待保存题目')),
       );
     }
@@ -50,7 +51,7 @@ class _QuestionSplitConfirmationScreenState
         drafts.where((draft) => draft.canSave && draft.selected).length;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(context, 
         title: const Text('拆分保存'),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.chevron_left),

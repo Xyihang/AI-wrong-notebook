@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 
 class QuestionTextCorrectionScreen extends ConsumerStatefulWidget {
@@ -40,14 +41,14 @@ class _QuestionTextCorrectionScreenState
     final record = ref.watch(currentQuestionProvider);
     if (record == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('核对题干')),
+        appBar: glassTopBar(context, title: const Text('核对题干')),
         body: const Center(child: Text('未找到本次解析结果')),
       );
     }
 
     final note = record.analysisResult?.consistencyNote.trim() ?? '';
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(context, 
         title: const Text('核对题干'),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.chevron_left),

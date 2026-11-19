@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/shared/widgets/math_content_view.dart';
 
 class QuestionSaveConfirmationScreen extends ConsumerStatefulWidget {
@@ -39,7 +40,7 @@ class _QuestionSaveConfirmationScreenState
 
     if (current == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('保存确认')),
+        appBar: glassTopBar(context, title: const Text('保存确认')),
         body: const Center(child: Text('未找到题目记录')),
       );
     }
@@ -55,7 +56,7 @@ class _QuestionSaveConfirmationScreenState
     }
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(context, 
         title: const Text('保存确认'),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.chevron_left),

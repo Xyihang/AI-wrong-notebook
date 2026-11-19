@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/domain/models/subject.dart';
 
 class SubjectManagementScreen extends ConsumerWidget {
@@ -12,7 +13,7 @@ class SubjectManagementScreen extends ConsumerWidget {
     final questionsAsync = ref.watch(questionListProvider);
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(context, 
         title: const Text('科目管理'),
         leading: IconButton(
             icon: const Icon(CupertinoIcons.chevron_left),

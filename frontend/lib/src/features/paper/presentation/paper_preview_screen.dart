@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
 import 'package:smart_wrong_notebook/src/data/remote/backend/backend_client.dart';
 import 'package:smart_wrong_notebook/src/domain/models/paper.dart';
@@ -131,7 +132,7 @@ class PaperPreviewScreen extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     if (paper == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('预览')),
+        appBar: glassTopBar(context, title: const Text('预览')),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -153,7 +154,8 @@ class PaperPreviewScreen extends ConsumerWidget {
     final count = paper.questions.length;
     final existing = paper.questions.where((q) => q.isExisting).length;
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(
+        context,
         title: const Text('组卷预览'),
         actions: <Widget>[
           IconButton(

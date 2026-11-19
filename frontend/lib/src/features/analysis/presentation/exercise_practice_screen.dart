@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/domain/models/generated_exercise.dart';
 import 'package:smart_wrong_notebook/src/domain/models/question_record.dart';
 import 'package:smart_wrong_notebook/src/domain/services/exercise_round_service.dart';
@@ -42,7 +43,7 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
     final fallbackRoute = returnRoute ?? '/notebook';
     if (current == null) {
       return Scaffold(
-        appBar: AppBar(
+        appBar: glassTopBar(context, 
             title: const Text('练习'),
             leading: IconButton(
                 icon: const Icon(CupertinoIcons.chevron_left),
@@ -75,7 +76,7 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
 
     if (exercises.isEmpty) {
       return Scaffold(
-        appBar: AppBar(
+        appBar: glassTopBar(context, 
           title: const Text('举一反三'),
           leading: IconButton(
             icon: const Icon(CupertinoIcons.chevron_left),
@@ -113,7 +114,7 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(context, 
         title: Text('举一反三 ${_index + 1}/${exercises.length}'),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.xmark),
@@ -450,7 +451,7 @@ class _ExercisePracticeState extends ConsumerState<ExercisePracticeScreen> {
         practiceContext?.source == PracticeContextSource.analysis;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: glassTopBar(context, 
         title: Text('第 $roundIndex轮完成'),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.xmark),

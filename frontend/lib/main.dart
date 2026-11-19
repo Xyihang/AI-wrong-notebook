@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/app/design/page_transitions.dart';
 import 'package:smart_wrong_notebook/src/config/scroll_tint.dart';
 import 'package:smart_wrong_notebook/src/common/widgets/app_fab.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_edge_fade.dart';
@@ -293,25 +294,28 @@ void main() async {
         ],
         child: Consumer(
           builder: (context, ref, _) {
-            // P3/C3：高档设备 + 玻璃开启时，页面切换使用玻璃转场
-            final useGlassTransition = ref.watch(glassEnabledProvider) &&
-                ref.watch(glassDeviceTierProvider) == GlassTier.high;
-            const glassTransitions = PageTransitionsTheme(
+            // 统一转场：高档玻璃转场 / 中档淡入+12px 上移 / 低档纯淡入
+            final glassOn = ref.watch(glassEnabledProvider);
+            final tier = ref.watch(glassTierProvider);
+            final PageTransitionsBuilder pageTransition =
+                (glassOn && tier == GlassTier.high)
+                    ? const GlassPageTransitionsBuilder()
+                    : AppFadeSlideTransitionsBuilder(
+                        slideFraction:
+                            tier == GlassTier.low ? 0 : 0.02,
+                      );
+            final transitions = PageTransitionsTheme(
               builders: <TargetPlatform, PageTransitionsBuilder>{
-                TargetPlatform.android: GlassPageTransitionsBuilder(),
-                TargetPlatform.iOS: GlassPageTransitionsBuilder(),
+                TargetPlatform.android: pageTransition,
+                TargetPlatform.iOS: pageTransition,
               },
             );
             final light = buildLightTheme();
             final dark = buildDarkTheme();
             return MaterialApp.router(
               title: 'AI错题本',
-              theme: useGlassTransition
-                  ? light.copyWith(pageTransitionsTheme: glassTransitions)
-                  : light,
-              darkTheme: useGlassTransition
-                  ? dark.copyWith(pageTransitionsTheme: glassTransitions)
-                  : dark,
+              theme: light.copyWith(pageTransitionsTheme: transitions),
+              darkTheme: dark.copyWith(pageTransitionsTheme: transitions),
               themeMode: ref.watch(themeModeProvider),
               routerConfig: router,
               debugShowCheckedModeBanner: false,

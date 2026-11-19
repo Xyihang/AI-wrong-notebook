@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_edge_fade.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_providers.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_top_bar.dart';
 import 'package:smart_wrong_notebook/src/data/remote/ai/ai_analysis_service.dart';
@@ -164,7 +165,9 @@ class _PaperSetupScreenState extends ConsumerState<PaperSetupScreen> {
     return Scaffold(
       extendBodyBehindAppBar: glassEnabled,
       appBar: glassTopBar(context, title: const Text('AI 变式组卷')),
-      body: ListView(
+      body: Stack(
+        children: <Widget>[
+          ListView(
         padding: EdgeInsets.fromLTRB(
           20,
           16 + (glassEnabled ? glassTopInset(context) : 0),
@@ -243,6 +246,14 @@ class _PaperSetupScreenState extends ConsumerState<PaperSetupScreen> {
           const SizedBox(height: 8),
           Text('生成可能耗时数十秒，期间请勿离开此页',
               style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+        ],
+      ),
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: GlassEdgeFade(height: 40),
+          ),
         ],
       ),
     );

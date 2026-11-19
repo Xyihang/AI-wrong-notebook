@@ -328,3 +328,26 @@ Widget tabBarFor(...);
 可选项（未做）：
 - C2 `GlassMaterialize` 页面出现动画；
 - ProgressiveBlur 扩展到复习页/详情页。
+
+
+---
+
+## 13. P4 真机验收记录（2026-11-19，Redmi M511CD）
+
+回归（玻璃关闭 → Material）：
+- 首页：拍照按钮回退 FilledButton、底部栏回退 NavigationBar ✅
+- 设置：AppBar 回退、玻璃外观选择器回退 Material 弹层 ✅
+- 错题本：搜索框/筛选 chips/卡片全部回退，无玻璃残留 ✅
+- 拍照弹层：Material 弹层，内容按高度自适应（已修复固定高度导致的空白/重复把手）✅
+
+玻璃开启（自动 → 高档）：
+- 顶栏、搜索、chips、左滑删除、玻璃弹层、底部 Dock 渲染正常，无遮挡 ✅
+- 低档切换后玻璃仍正常渲染（minimal 质量），无异常 ✅
+
+**数值帧率：未采集**。原因：Impeller 不走 HWUI，`dumpsys gfxinfo` 无数据；
+`dumpsys SurfaceFlinger --latency` 对本应用图层仅返回刷新周期（无帧时间戳）。
+需要在 `flutter run --profile` + DevTools Performance 面板采集，或用集成测试的
+`FrameTimingSummarizer`。滚动过程目视流畅、无卡顿/掉帧观感，但缺乏数值证据。
+
+**已回退项**：ProgressiveBlur 边缘渐隐（C4）在未滚动时会糊住列表首行文字，
+已从 5 个页面撤除，组件与 shader 预热保留备后续按滚动偏移启用。

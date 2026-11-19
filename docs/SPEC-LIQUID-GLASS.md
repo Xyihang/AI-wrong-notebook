@@ -308,3 +308,23 @@ Widget tabBarFor(...);
 已知限制：
 - 浅色主题下玻璃对比度较低（磨砂白效果），深色主题更明显；
 - `GlassAppBar` 不可用，顶栏统一走自建 `GlassTopBar`。
+
+
+---
+
+## 12. 实施状态快照（Round 17）
+
+已完成：
+- P3/C3：高档设备 + 玻璃开启时启用 `GlassPageTransitionsBuilder` 玻璃页面转场；
+- P3/C4：新增 `GlassEdgeFade`（ProgressiveBlur 渐进模糊），已接入错题本列表与设置页，
+  shader 在开屏预热阶段预编译；
+- 全站顶栏玻璃化：5 个高频页穿透式（设置/错题本/复习/详情/组卷设置），
+  13 个页面标准位（仅替换 appBar，不改布局）。
+
+未完成（需真机）：
+- P4：关闭玻璃逐页回归、`flutter run --profile` 帧率采集（Impeller 不走 HWUI，
+  `dumpsys gfxinfo` 无效）。
+
+可选项（未做）：
+- C2 `GlassMaterialize` 页面出现动画；
+- ProgressiveBlur 扩展到复习页/详情页。

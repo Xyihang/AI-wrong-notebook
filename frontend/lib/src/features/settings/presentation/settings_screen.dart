@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_edge_fade.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
 import 'package:smart_wrong_notebook/src/core/constants/app_config.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_appearance.dart';
@@ -68,7 +69,9 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       extendBodyBehindAppBar: glassEnabled,
       appBar: glassTopBar(context, title: const Text('设置')),
-      body: ListView(
+      body: Stack(
+        children: <Widget>[
+          ListView(
         padding: EdgeInsets.fromLTRB(
           24,
           24 + (glassEnabled ? glassTopInset(context) : 0),
@@ -323,6 +326,14 @@ class SettingsScreen extends ConsumerWidget {
                 }
               },
             ),
+          ),
+        ],
+      ),
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: GlassEdgeFade(height: 40),
           ),
         ],
       ),

@@ -117,7 +117,7 @@ class HomeScreen extends ConsumerWidget {
           _CaptureButton(
             onTap: () => showAppSheet<void>(
               context,
-              bottomInset: 84,
+              bottomInset: 20,
               builder: (_) => const CaptureEntrySheet(),
             ),
           ),

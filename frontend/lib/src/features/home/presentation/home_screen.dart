@@ -46,6 +46,9 @@ class HomeScreen extends ConsumerWidget {
       _guestReminderShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!context.mounted) return;
+        // 延后 350ms：避开首帧渲染高峰
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        if (!context.mounted) return;
         final goLogin = await showAppConfirm(
           context,
           title: '游客模式',
@@ -79,9 +82,12 @@ class HomeScreen extends ConsumerWidget {
     // 云端拉取合并完成后，即时刷新列表与连击/成就。
     ref.listen(questionSyncMergedProvider, (prev, next) {
       if (next.hasValue && prev?.value != next.value) {
-        ref.invalidate(questionListProvider);
-        ref.invalidate(gamificationSnapshotProvider);
-        ref.invalidate(dueReviewProvider);
+        // 延后到下一帧再刷新，避免与进入页面首帧抢主线程
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.invalidate(questionListProvider);
+          ref.invalidate(gamificationSnapshotProvider);
+          ref.invalidate(dueReviewProvider);
+        });
       }
     });
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:smart_wrong_notebook/src/app/auth_controller.dart';
+import 'package:smart_wrong_notebook/src/features/glass/glass_warmup.dart';
 import 'package:smart_wrong_notebook/src/features/glass/glass_overlays.dart';
 import 'package:smart_wrong_notebook/src/app/providers.dart';
 import 'package:smart_wrong_notebook/src/core/constants/app_config.dart';
@@ -66,6 +67,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   /// 进入时提醒用户登录；游客态不持久化，每次启动都需重新选择。
   Future<void> _enterGuest() async {
     if (_submitting) return;
+    // 立刻给反馈：后续有 3 次 DB 往返 + 玻璃预热，否则点下去像没反应
+    setState(() => _submitting = true);
     final repo = ref.read(settingsRepositoryProvider);
     final config = await repo.getAiProviderConfig();
     final configured = config != null &&
@@ -94,7 +97,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ],
         ),
       );
-      if (go == true && mounted) context.push('/guest/provider');
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      if (go == true) context.push('/guest/provider');
       return;
     }
 
@@ -132,6 +137,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // 「建议登录」提示框改在首页弹出：进入游客态后路由会立刻重定向到首页，
     // 若在此处弹窗会被登录页销毁一起带走（表现为一闪而过）。
     if (!mounted) return;
+    // 等玻璃 shader 预热（最多 800ms），避免首页首帧同步编译 shader 造成卡顿
+    await glassWarmUpFuture?.timeout(const Duration(milliseconds: 800),
+        onTimeout: () {});
+    if (!mounted) return;
+    setState(() => _submitting = false);
     context.go('/');
   }
 

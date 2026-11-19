@@ -24,9 +24,6 @@ import 'package:smart_wrong_notebook/src/shared/widgets/math_content_view.dart';
 /// 本会话已弹过「恭喜」的徽章 id（避免同一次解锁重复弹出）。
 final Set<String> _celebratedUnlockIds = <String>{};
 
-/// 本次游客会话是否已弹过「建议登录」提醒（避免重复弹）。
-bool _guestReminderShown = false;
-
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -38,58 +35,6 @@ class HomeScreen extends ConsumerWidget {
     final gamificationAsync = ref.watch(gamificationSnapshotProvider);
     final auth = ref.watch(authControllerProvider);
     final isGuest = auth is AuthGuest;
-
-    // 游客模式「建议登录」提醒：进入首页后弹一次，必须用户确认。
-    if (!isGuest) {
-      _guestReminderShown = false;
-    } else if (!_guestReminderShown) {
-      _guestReminderShown = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (!context.mounted) return;
-        // 延后 350ms：避开首帧渲染高峰
-        await Future<void>.delayed(const Duration(milliseconds: 350));
-        if (!context.mounted) return;
-        final goLogin = await showAppConfirm(
-          context,
-          title: '游客模式',
-          message: '你正以游客身份使用：错题与数据只保存在本机，卸载/换机不会保留。\n'
-              '建议登录账号，以便云端同步、多设备使用。',
-          confirmText: '去登录',
-          cancelText: '继续游客',
-        );
-        if (goLogin && context.mounted) {
-          await ref.read(authControllerProvider.notifier).logout();
-          if (context.mounted) context.go('/login');
-        }
-      });
-    }
-
-    // 新徽章解锁 → 弹「恭喜」（每枚只弹一次）。
-    ref.listen(gamificationSnapshotProvider, (prev, next) {
-      final data = next.valueOrNull;
-      if (data == null || data.newlyUnlocked.isEmpty) return;
-      final fresh = data.newlyUnlocked
-          .where((a) => !_celebratedUnlockIds.contains(a.id))
-          .toList();
-      if (fresh.isEmpty) return;
-      _celebratedUnlockIds.addAll(fresh.map((a) => a.id));
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!context.mounted) return;
-        showAchievementCelebration(context, fresh);
-      });
-    });
-
-    // 云端拉取合并完成后，即时刷新列表与连击/成就。
-    ref.listen(questionSyncMergedProvider, (prev, next) {
-      if (next.hasValue && prev?.value != next.value) {
-        // 延后到下一帧再刷新，避免与进入页面首帧抢主线程
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ref.invalidate(questionListProvider);
-          ref.invalidate(gamificationSnapshotProvider);
-          ref.invalidate(dueReviewProvider);
-        });
-      }
-    });
 
     final glassEnabled = ref.watch(glassEnabledProvider);
     return Scaffold(

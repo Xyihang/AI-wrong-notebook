@@ -140,3 +140,26 @@ these terms.
 
 This license does not grant you any rights in the trademarks, service marks, or
 logos of the licensor.
+
+--------------------------------------------------------------------------------
+ADDITIONAL REQUIREMENT — Attribution in the User Interface (附加要求：界面署名)
+--------------------------------------------------------------------------------
+
+Any modified, adapted, or derivative version of this software (the "Software"),
+whether distributed or used non-commercially, MUST prominently display the
+original author credit in the program's own user interface, in a place a normal
+user can reasonably find (for example an "About" screen, settings screen, or a
+splash/startup screen). The credit must include:
+
+  1. the exact text "Based on AI Wrong Notebook by Xyihang";
+  2. a link to the original repository:
+     https://github.com/Xyihang/AI-wrong-notebook
+
+The credit may not be removed, hidden, obfuscated, or made less prominent by the
+modifier. If the Software has no user interface (e.g. it is used as a library),
+this requirement does not apply, but the attribution must remain in the
+accompanying documentation.
+
+任何对本软件的修改版、改编版或衍生版本，无论是否分发，均必须在程序自身的用户
+界面中（如「关于」页、设置页或启动页）显著注明原作者与原始仓库链接，且不得删除
+或弱化该署名。

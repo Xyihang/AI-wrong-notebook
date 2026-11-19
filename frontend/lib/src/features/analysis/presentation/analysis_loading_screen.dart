@@ -284,15 +284,20 @@ class _LoadingViewState extends ConsumerState<_LoadingView>
                 const SizedBox(height: 22),
                 ValueListenableBuilder<int>(
                   valueListenable: AiAnalysisService.analysisStage,
-                  builder: (_, stage, __) => Column(
-                    children: <Widget>[
-                      for (var i = 0; i < _stages.length; i++)
-                        _StageRow(
-                          label: _stages[i],
-                          done: i < stage,
-                          active: i == stage,
-                        ),
-                    ],
+                  // 四行阶段文案作为整体水平居中（行内仍左对齐）
+                  builder: (_, stage, __) => Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        for (var i = 0; i < _stages.length; i++)
+                          _StageRow(
+                            label: _stages[i],
+                            done: i < stage,
+                            active: i == stage,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 18),

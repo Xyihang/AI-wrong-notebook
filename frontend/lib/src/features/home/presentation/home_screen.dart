@@ -208,20 +208,6 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
-          // T10：右下角悬浮拍照按钮
-          Positioned(
-            right: AppTokens.s4,
-            bottom: 88,
-            child: AppFab(
-              icon: CupertinoIcons.camera,
-              tooltip: '拍照录题',
-              onTap: () => showAppSheet<void>(
-                context,
-                bottomInset: 20,
-                builder: (_) => const CaptureEntrySheet(),
-              ),
-            ),
-          ),
           // T10：底部渐隐
           const Positioned(
             left: 0,
@@ -1065,7 +1051,11 @@ class _CaptureButton extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
-      child: GlassContainer(
+      // 整块玻璃都可点：opaque 命中测试 + 撑满宽度
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: double.infinity,
+        child: GlassContainer(
         quality: ref.watch(glassQualityProvider),
         shape: const LiquidRoundedSuperellipse(borderRadius: 26),
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1087,6 +1077,7 @@ class _CaptureButton extends ConsumerWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );
